@@ -1,13 +1,29 @@
 
-# About the project
+# Chapter 1: About the project
 
-*Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
+I'd like to learn about statistical tests and possibly how to add R to data pipelines.
+
+I don't think R will replace my current tools for analyzing and plotting data, but I do want to at least see how feasible it would be to add R as a tool for developing statistical analyses for experiments, and possibly writing some small programs for quick statistical analysis in postprocessing of experiments.
+
+I'm familiar with _git_, it's a daily driver for me, I tend to use gnuplot and python for quick plotting, and either use _python_, _UNIX_ tools or custom _C++_ programs for data analysis utilities.
+
+Here's the link to the repo on github:
+https://github.com/oj-lappi/IODS-project
+
+I'm interested in creating automatic data pipelines that process data in object storage and upload plots to a dashboard.
+
+Github pages might be a good way to do that, although I would prefer an on-prem solution (HU's gitlab maybe?) or a self-hosted website.
+
+## ~~Personal Access Token~~ RStudio/Git integration
+
+I have ssh keys set up on each of my computers, and a personal access token would be less flexible than that.
+
+I can push and pull with this setup from RStudio.
+
 
 ```{r}
-# This is a so-called "R chunk" where you can write R code.
+# Timestamp:
 
 date()
 
 ```
-The text continues here.
-
