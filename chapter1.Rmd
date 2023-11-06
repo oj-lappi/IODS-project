@@ -28,7 +28,13 @@ I checked the exercises and followed some of them along locally, I think I'm get
 
 It should be possible to set up a git hook to knit before pushing.
 
-For this, I've created a shellscript called "knit", which is in this repo, now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:
+For this, I've created a shellscript called "knit", which is in this repo:
+```
+#!/bin/bash
+R --no-save <<< "rmarkdown::render(\"$(pwd)/index.Rmd\")"
+```
+
+Now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:
 
 ```
 index.html: index.Rmd *.Rmd
