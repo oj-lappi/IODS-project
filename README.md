@@ -1,2 +1,4 @@
 # IODS-project
-Template for the IODS course
+
+[live github pages page](https://oj-lappi.github.io/IODS-project/)
+
