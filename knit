@@ -1,0 +1,4 @@
+#!/bin/bash
+# If you want to knit from the command line.
+# although this will create a slightly different html file than the "Knit"-button in Rstudio, visually it should be the same
+R --no-save <<< "rmarkdown::render(\"$(pwd)/index.Rmd\")"

@@ -20,6 +20,21 @@ I have ssh keys set up on each of my computers, and a personal access token woul
 
 I can push and pull with this setup from RStudio.
 
+## Exercises
+
+I checked the exercises and followed some of them along locally, I think I'm getting the hang of it :).
+
+## Automatic knitting
+
+It should be possible to set up a git hook to knit before pushing.
+
+For this, I've created a shellscript called "knit", which is in this repo, now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile.
+
+Now, the git hook, which looks like this:
+
+```
+
+```
 
 ```{r}
 # Timestamp:
