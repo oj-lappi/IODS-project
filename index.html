@@ -401,13 +401,26 @@ pre code {
 <div id="automatic-knitting" class="section level2">
 <h2>Automatic knitting</h2>
 <p>It should be possible to set up a git hook to knit before pushing.</p>
-<p>For this, I’ve created a shellscript called “knit”, which is in this repo, now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile.</p>
-<p>Now, the git hook, which looks like this:</p>
-<pre><code></code></pre>
+<p>For this, I’ve created a shellscript called “knit”, which is in this repo, now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:</p>
+<pre><code>index.html: index.Rmd *.Rmd
+    ./knit</code></pre>
+<p>Now, the git hook, which looks like this, it’s not commited with git, and lives in <code>.git/hooks/pre-commit</code>:</p>
+<pre><code>#!/bin/sh
+make -q
+error_code=$?
+make || echo &quot;Failed to knit index.html&quot;
+
+if [ ${error_code} -ne 0 ]; then
+    git add index.html
+    echo &quot;index.html was not up-to-date, it has now been updated. Please commit again&quot;
+fi
+
+exit ${error_code}</code></pre>
+<p>Now, knitting is tied to running git commit, and the html file will always be up-to-date with the .Rmd files.</p>
 <pre class="r"><code># Timestamp:
 
 date()</code></pre>
-<pre><code>## [1] &quot;Mon Nov  6 13:58:42 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Mon Nov  6 14:05:47 2023&quot;</code></pre>
 <hr />
 </div>
 </div>
@@ -420,7 +433,7 @@ date()</code></pre>
 <li>Assume the reader has no previous knowledge of your data or the more advanced methods you are using.</li>
 </ul>
 <pre class="r"><code>date()</code></pre>
-<pre><code>## [1] &quot;Mon Nov  6 13:58:42 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Mon Nov  6 14:05:47 2023&quot;</code></pre>
 <p>Here we go again…</p>
 <hr />
 <p>(more chapters to be added similarly as we proceed with the course!)</p>
