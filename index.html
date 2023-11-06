@@ -404,7 +404,7 @@ pre code {
 <p>For this, I’ve created a shellscript called “knit”, which is in this repo:</p>
 <pre><code>#!/bin/bash
 R --no-save &lt;&lt;&lt; &quot;rmarkdown::render(\&quot;$(pwd)/index.Rmd\&quot;)&quot;</code></pre>
-<p>Now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:</p>
+<p>This also makes it easier to work from the terminal, which I prefer to do, especially when it comes to git. Now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:</p>
 <pre><code>index.html: index.Rmd *.Rmd
     ./knit</code></pre>
 <p>Now, the git hook, which looks like this, it’s not commited with git, and lives in <code>.git/hooks/pre-commit</code>:</p>
@@ -423,7 +423,7 @@ exit ${error_code}</code></pre>
 <pre class="r"><code># Timestamp:
 
 date()</code></pre>
-<pre><code>## [1] &quot;Mon Nov  6 14:12:58 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Mon Nov  6 14:18:21 2023&quot;</code></pre>
 <hr />
 </div>
 </div>
@@ -436,7 +436,7 @@ date()</code></pre>
 <li>Assume the reader has no previous knowledge of your data or the more advanced methods you are using.</li>
 </ul>
 <pre class="r"><code>date()</code></pre>
-<pre><code>## [1] &quot;Mon Nov  6 14:12:58 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Mon Nov  6 14:18:21 2023&quot;</code></pre>
 <p>Here we go again…</p>
 <hr />
 <p>(more chapters to be added similarly as we proceed with the course!)</p>

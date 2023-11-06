@@ -34,6 +34,7 @@ For this, I've created a shellscript called "knit", which is in this repo:
 R --no-save <<< "rmarkdown::render(\"$(pwd)/index.Rmd\")"
 ```
 
+This also makes it easier to work from the terminal, which I prefer to do, especially when it comes to git.
 Now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:
 
 ```
