@@ -1,2 +1,2 @@
-index.html: index.Rmd *.Rmd
+index.html: index.Rmd chapter*.Rmd
 	./knit
