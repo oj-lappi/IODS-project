@@ -1,13 +1,18 @@
-# Insert chapter 2 title here
+# Learning2014 dataset
 
-*Describe the work you have done this week and summarize your learning.*
-
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
 ```{r}
+# Timestamp
 date()
 ```
 
-Here we go again...
+## Wrangling
+
+This was fairly straightforward, using the pipes (`%>%`) is very convenient.
+I did find one thing interesting.
+The backup analysis dataset provided on moodle has chopped some of the decimals off the attitude column, the values are rounded.
+In my cleaned dataset, this is not the case, the numbers have higher precision but some floating point error in the right-hand decimals.
+
+I wonder what the reason for this discrepancy is, maybe I should have called a rounding function at some point?
+
+
