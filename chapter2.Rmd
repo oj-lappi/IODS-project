@@ -1,4 +1,4 @@
-# Learning2014 dataset
+# Chapter 2: Linear regression on the Learning2014 dataset
 
 ```{r}
 # Timestamp
