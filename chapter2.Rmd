@@ -1,6 +1,5 @@
 # Learning2014 dataset
 
-
 ```{r}
 # Timestamp
 date()
@@ -8,11 +7,339 @@ date()
 
 ## Wrangling
 
-This was fairly straightforward, using the pipes (`%>%`) is very convenient.
-I did find one thing interesting.
-The backup analysis dataset provided on moodle has chopped some of the decimals off the attitude column, the values are rounded.
-In my cleaned dataset, this is not the case, the numbers have higher precision but some floating point error in the right-hand decimals.
+I know we didn't have to write about the wrangling, but I found that we can actually run parts of the R-script in chunks by using labels! This is cool. All the code here is straight from the R-script.
+
+```{r cache=FALSE}
+knitr::read_chunk('data/assignment2_learning2014.R')
+```
+
+------------------------------------------------------------------------
+
+### Setup, libraries and variables
+
+```{r setup}
+```
+
+### Read the data
+
+```{r read_data}
+```
+
+### Wrangle it
+
+```{r wrangle_columns}
+```
+
+### Write it to a file
+
+```{r write_data}
+```
+
+### Check the consistency
+
+This is extra, but let's check that the data is serialized and parsed correctly.
+
+```{r check_data}
+```
+
+### Notes
+
+I did find one thing interesting. The backup analysis dataset provided on moodle has chopped some of the decimals off the attitude column, the values are rounded. In my cleaned dataset, this is not the case, the numbers have higher precision but some floating point error in the right-hand decimals.
 
 I wonder what the reason for this discrepancy is, maybe I should have called a rounding function at some point?
 
+------------------------------------------------------------------------
 
+# Analysis
+
+```         
+Analysis (max 15 points)
+
+
+The focus of your work should be on the clarity of your report.
+For full points you should be able to show an understanding of the methods and results used in your analysis.
+```
+
+```{r}
+library(readr)
+lrn2014 <- read_csv('data/learning2014.csv')
+```
+
+## The shape of the data
+
+```{r fig.align="center", echo = FALSE,fig.width = 8}
+paste("dimensions:",dim(lrn2014))
+```
+
+There are 166 rows with 7 columns each.
+
+The spec is:
+
+```{r fig.align="center", echo = FALSE,fig.width = 8}
+spec(lrn2014)
+```
+
+## Descriptive statistics
+
+### Sex distribution
+
+`gender` seems to be a categorical value, so let's see the number of rows per `gender` (sex):
+
+```{r fig.align="center", echo = FALSE,fig.width = 8}
+lrn2014 %>%
+  group_by(gender) %>%
+  summarize(count = n())
+```
+
+110 F, and 56 M, there is a skew towards female students in the dataset. Let's plot that.
+
+```{r fig.align="center", echo = FALSE,fig.width = 8}
+library(GGally)
+library(ggplot2)
+lrn2014 %>%
+  ggplot(aes(x = gender)) +
+  geom_bar(aes(fill = gender), show.legend = FALSE) 
+```
+
+### Age distribution
+
+Let's plot the age distribution of the students.
+
+```{r fig.align="center", fig.width = 8}
+library(GGally)
+library(ggplot2)
+lrn2014 %>%
+  ggplot(aes(x = age)) +
+  stat_count()
+
+min(lrn2014$age)
+max(lrn2014$age)
+median(lrn2014$age)
+```
+
+The age range is from 17 to 55, and the median is 22. Visually inspecting the distribution, the mode of the distribution is early twenties, as you would expect, although there is a long tail.
+
+## Age-sex distribution
+
+Let's combine the two columns into a classic population pyramid, or age-sex pyramid.
+
+But that's not exactly what we want. It turns out a population pyramid is not an out-of-the-box plot we can easily produce, we have to manually calculate bins and do some magic.
+
+```{r fig.align="center",fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
+  group_by(gender, age_bin) %>%                      # Group by bin and gender
+  summarize(count =n()) %>%                          # Sum over groups
+  mutate(count = 
+      if_else(gender == 'M', -count, count)) %>%     # Turn one negative
+  ggplot(aes(x=count, y = age_bin)) +
+  geom_col(aes(fill=gender)) 
+```
+
+There are very few male students under 20, I would speculate that this is due to Finnish army conscription, otherwise the distribution seems roughly equal on the female and male sides.
+
+We can of course bin by year instead of 5 years, and we get a higher resolution but more noise.
+
+```{r fig.align="center", echo = FALSE,fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  group_by(gender, age) %>%                      # Group by bin and gender
+  summarize(count =n()) %>%                          # Sum over groups
+  mutate(count = 
+      if_else(gender == 'M', -count, count)) %>%     # Turn one negative
+  ggplot(aes(x=count, y = age)) +
+  geom_col(orientation='y',aes(fill=gender)) 
+```
+
+There is one peculiar decline in the female student participation around \~26-28 which jumps back after thirty. This might be a maternity effect, but this is highly speculative, there's very few samples in this dataset.
+
+## Exam scores
+
+Let's look at exam scores:
+```{r}
+paste("median:", median(lrn2014$points), ", mean:",mean(lrn2014$points), ", standard deviation:", sd(lrn2014$points))
+```
+
+
+Let's look at the full distribution usin `geom_density`.
+
+```{r fig.align="center", fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  ggplot(aes(x=points)) +
+  geom_density()
+```
+
+There's a curious valley in the density at around 12-14 points. Let's look closer.
+
+```{r fig.align="center", echo = FALSE,fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  ggplot(aes(x=points, tickwidth=1)) +
+  geom_histogram(boundary=0,binwidth=1) +
+  scale_x_continuous(breaks = seq(0, 40, by = 1))
+```
+
+So no students got 12,13, or 14 points. The jump from 11 to 15 must be behind some barrier. Let's look at our two demographic variables.
+
+## Exploring exam score distributions for different groups
+
+## Point means by gender, with age gradient
+
+```{r fig.align="center", fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  group_by(gender) %>%
+  ggplot(aes(x=points)) +
+  geom_histogram(boundary=0,binwidth=2, aes(fill=factor(age))) +
+  facet_wrap(~gender)
+```
+
+I see no clear bias either way, perhaps a slight correlation with score and age within the mode (20-30 years) and then no correlation for higher ages. The female distribution seems most well-behaved, although the gap from 11 points up is much sharper here as well.
+
+## Point means by age group, with gender
+
+```{r fig.align="center", fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
+  group_by(gender, age_bin) %>%
+  ggplot(aes(x=points)) +
+  geom_histogram(boundary=0,binwidth=2, aes(fill=gender)) +
+  facet_wrap(~age_bin)
+```
+
+## Point means by age group, box plot
+
+```{r fig.align="center", fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
+  ggplot(aes(x=age_bin, y = points)) +
+  stat_boxplot(geom = "errorbar", width = 0.25) +
+      geom_boxplot()
+```
+
+```{r fig.align="center", fig.width = 8, results = 'hide'}
+lrn2014 %>%
+  mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
+  ggplot(aes(x=age_bin, y = points)) +
+  stat_boxplot(geom = "errorbar", width = 0.25) +
+      geom_boxplot()+
+  facet_wrap(~gender)
+```
+
+I see no correlation.
+
+## Survey question category scores
+
+Let's start with a correlation matrix, and let's throw age and gender in there again as well, for good measure.
+
+```{r fig.align="center", fig.width = 14, results = 'hide'}
+lrn2014 %>%
+  select(gender, age, surf, stra, deep, attitude, points) %>%
+  ggpairs(aes(fill=gender, color=gender),lower=list(combo=wrap("facethist",binwidth=0.5))) # Have to add the lower arg so ggpairs doesn't complain
+```
+
+There seem to be negative correlations between: - `surf` and `deep` (but seemingly only strongly for male students) - `attitude` and `deep` (weak, but stronger for male students again) - `stra` and `surf` (weak)
+
+And a possitive correlation between `points` and `attitude`! This is the strongest linear relationship in the data. And we can verify that age does not seem to have an effect at all.
+
+There also seems to be a relationship between `attitude` and `gender`, but no relationship between `attitude` and `points`.
+
+# Regression
+
+```         
+    Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters. If an explanatory variable in your model does not have a statistically significant relationship with the target variable, remove the variable from the model and fit the model again without it. (0-4 points)
+```
+
+Based on the data exploration, `attitude` seems the most likely candidate, and next after that: `stra` and `surf`.
+
+### Simple regression as baseline
+
+Let's start with a simple regression model of `points ~ attitude`, which will be our baseline.
+
+```{r fig.align="center", fig.width = 10, fig.height= 10}
+simple_model <- lrn2014 %>%
+                  lm(points ~ attitude, data = .)
+summary(simple_model)
+```
+
+There is clearly a statistically significant relationship between `attitude` and `points`. But R-squared is only around 18.5%, so there is a lot of variance not explained by the model.
+
+### Multiple regression, 3 variables
+
+```{r fig.align="center", fig.width = 10, fig.height= 10}
+three_var_model <- lrn2014 %>%
+                  lm(points ~ attitude + stra + surf, data = .)
+summary(three_var_model)
+```
+
+The adjusted R-squared is higher, which means our model is capturing more of the underlying interactions than before, although still below 20%.
+
+It seems that the relationship between `points` and `surf` is not statistically significant.
+And depending on what our choice of significance level would be in a hypothesis test, the interaction with `stra` might not be significant.
+
+But a p-value of 0.117 is good enough for a software engineer (me) to decide to use the variable in a regression model.
+Let's drop `surf` and keep `stra`, and try again.
+
+### Multiple regression, 2 variables
+
+```{r fig.align="center",  fig.width = 10, fig.height= 10}
+two_var_model <- lrn2014 %>%
+                  lm(points ~ attitude + stra, data = .)
+summary(two_var_model)
+```
+Right, this is our best fit yet, we're going to select this one to analyze. Let's plot those plots.
+
+```{r fig.align="center",  fig.width = 10, fig.height= 10}
+par(mfrow=c(2,2))
+plot(two_var_model)
+par(mfrow=c(1,1))
+```
+
+The assumptions of the model are that:
+ - the model is homoscedastic, the variance in the estimate given by the model is homogeneous.
+ - the 
+#TODO: finish this
+
+The Scale-Location plot is also trending down very slightly.
+I don't think this means the data is heteroscedastic, it certainly doesn't look like it is.
+
+but I'm not so familiar with these visual checks, so I searched the web for a homoscedasticity test, and found the _Breusch-Pagan Test_ in the `lmtest` library.
+
+```{r}
+#install.packages(lmtest)
+library(lmtest)
+two_var_model_bptest <- bptest(two_var_model)
+two_var_model_bptest
+```
+
+
+A p-value of `0.6256` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
+
+# Interpretation
+
+```
+    Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model. (0-3 points)
+```
+
+The fitted regression coefficients are:
+ - intercept: 8.9729
+ - `attitude`: 3.4658 
+ - `stra`: 0.9137
+
+Which means the that the model predicts the conditional mean of the exam scores, given the `attitude` and `stra`values as:
+```
+points = 8.9729 + 3.4628*attitude + 0.9137*stra
+```
+
+The adjusted R-squared is 0.1951, which I believe means that when we compare the sum of residuals of predictions made by the model to a sum of residuals using the sample mean as a predicted value, the sum of residuals of the linear model is roughly 80% of the sum of residuals when using the sample mean as a predictor.
+
+In other words, if we know the values of `attitude` and `stra`, we can estimate the exam score of a student using the model with roughly 19% less expected error.
+
+I'm not quite sure if this interpretation is exact, but it's what I was able to piece together from sources online, mostly wikipedia ([https://en.wikipedia.org/wiki/Coefficient_of_determination](https://en.wikipedia.org/wiki/Coefficient_of_determination)).
+
+```
+    Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots. (0-3 points)
+
+After completing all the phases above you are ready to submit your Assignment for the review (using the Moodle Workshop below). Have the two links (your GitHub repository and your course diary) ready!
+```
+
+```{r}
+
+```
