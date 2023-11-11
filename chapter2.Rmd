@@ -1,56 +1,23 @@
 # Chapter 2: Linear regression on the Learning2014 dataset
 
+## 1. Reading the data
+
+
+```{r echo = 'T', results = 'hide'}
+#Dependencies
+#install.packages(c("readr","lmtest", "dplyr"))
+library(readr)
+library(dplyr)
+library(lmtest)
+```
+
 ```{r}
 # Timestamp
 date()
 ```
 
-## Wrangling
 
-I know we didn't have to write about the wrangling, but I found that we can actually run parts of the R-script in chunks by using labels! This is cool. All the code here is straight from the R-script.
-
-```{r cache=FALSE}
-knitr::read_chunk('data/assignment2_learning2014.R')
-```
-
-------------------------------------------------------------------------
-
-### Setup, libraries and variables
-
-```{r setup}
-```
-
-### Read the data
-
-```{r read_data}
-```
-
-### Wrangle it
-
-```{r wrangle_columns}
-```
-
-### Write it to a file
-
-```{r write_data}
-```
-
-### Check the consistency
-
-This is extra, but let's check that the data is serialized and parsed correctly.
-
-```{r check_data}
-```
-
-### Notes
-
-I did find one thing interesting. The backup analysis dataset provided on moodle has chopped some of the decimals off the attitude column, the values are rounded. In my cleaned dataset, this is not the case, the numbers have higher precision but some floating point error in the right-hand decimals.
-
-I wonder what the reason for this discrepancy is, maybe I should have called a rounding function at some point?
-
-------------------------------------------------------------------------
-
-# Analysis
+## 2. Analysis
 
 ```         
 Analysis (max 15 points)
@@ -61,11 +28,10 @@ For full points you should be able to show an understanding of the methods and r
 ```
 
 ```{r}
-library(readr)
 lrn2014 <- read_csv('data/learning2014.csv')
 ```
 
-## The shape of the data
+### 2.1 The shape of the data
 
 ```{r fig.align="center", echo = FALSE,fig.width = 8}
 paste("dimensions:",dim(lrn2014))
@@ -79,9 +45,9 @@ The spec is:
 spec(lrn2014)
 ```
 
-## Descriptive statistics
+### 2.2 Descriptive statistics
 
-### Sex distribution
+#### Sex distribution
 
 `gender` seems to be a categorical value, so let's see the number of rows per `gender` (sex):
 
@@ -93,7 +59,7 @@ lrn2014 %>%
 
 110 F, and 56 M, there is a skew towards female students in the dataset. Let's plot that.
 
-```{r fig.align="center", echo = FALSE,fig.width = 8}
+```{r fig.align="center", fig.cap = "fig. 1.1, sex distributions", echo = FALSE,fig.width = 8}
 library(GGally)
 library(ggplot2)
 lrn2014 %>%
@@ -101,13 +67,11 @@ lrn2014 %>%
   geom_bar(aes(fill = gender), show.legend = FALSE) 
 ```
 
-### Age distribution
+#### Age distribution
 
 Let's plot the age distribution of the students.
 
-```{r fig.align="center", fig.width = 8}
-library(GGally)
-library(ggplot2)
+```{r fig.align="center", fig.cap = "fig. 1.2, age distributions",fig.width = 8}
 lrn2014 %>%
   ggplot(aes(x = age)) +
   stat_count()
@@ -119,13 +83,13 @@ median(lrn2014$age)
 
 The age range is from 17 to 55, and the median is 22. Visually inspecting the distribution, the mode of the distribution is early twenties, as you would expect, although there is a long tail.
 
-## Age-sex distribution
+#### Age-sex distribution
 
 Let's combine the two columns into a classic population pyramid, or age-sex pyramid.
 
 But that's not exactly what we want. It turns out a population pyramid is not an out-of-the-box plot we can easily produce, we have to manually calculate bins and do some magic.
 
-```{r fig.align="center",fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.3a, population pyramid", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
   group_by(gender, age_bin) %>%                      # Group by bin and gender
@@ -140,7 +104,7 @@ There are very few male students under 20, I would speculate that this is due to
 
 We can of course bin by year instead of 5 years, and we get a higher resolution but more noise.
 
-```{r fig.align="center", echo = FALSE,fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.3b, population pyramid #2, fine-grained bins", echo = FALSE,fig.width = 8, results = 'hide'}
 lrn2014 %>%
   group_by(gender, age) %>%                      # Group by bin and gender
   summarize(count =n()) %>%                          # Sum over groups
@@ -152,7 +116,7 @@ lrn2014 %>%
 
 There is one peculiar decline in the female student participation around \~26-28 which jumps back after thirty. This might be a maternity effect, but this is highly speculative, there's very few samples in this dataset.
 
-## Exam scores
+#### Exam scores
 
 Let's look at exam scores:
 ```{r}
@@ -162,7 +126,7 @@ paste("median:", median(lrn2014$points), ", mean:",mean(lrn2014$points), ", stan
 
 Let's look at the full distribution usin `geom_density`.
 
-```{r fig.align="center", fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.4a, exam score distribution", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   ggplot(aes(x=points)) +
   geom_density()
@@ -170,7 +134,7 @@ lrn2014 %>%
 
 There's a curious valley in the density at around 12-14 points. Let's look closer.
 
-```{r fig.align="center", echo = FALSE,fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.4b, exam score histogram", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   ggplot(aes(x=points, tickwidth=1)) +
   geom_histogram(boundary=0,binwidth=1) +
@@ -179,11 +143,11 @@ lrn2014 %>%
 
 So no students got 12,13, or 14 points. The jump from 11 to 15 must be behind some barrier. Let's look at our two demographic variables.
 
-## Exploring exam score distributions for different groups
+#### Exploring exam score distributions for different groups
 
-## Point means by gender, with age gradient
+##### Point means by sex, with age gradient
 
-```{r fig.align="center", fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.5a, exam scores by sex, with age gradient", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   group_by(gender) %>%
   ggplot(aes(x=points)) +
@@ -193,9 +157,9 @@ lrn2014 %>%
 
 I see no clear bias either way, perhaps a slight correlation with score and age within the mode (20-30 years) and then no correlation for higher ages. The female distribution seems most well-behaved, although the gap from 11 points up is much sharper here as well.
 
-## Point means by age group, with gender
+##### Point means by age group, with sex
 
-```{r fig.align="center", fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.5b, exam scores by age group, with labeled sex", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
   group_by(gender, age_bin) %>%
@@ -204,9 +168,9 @@ lrn2014 %>%
   facet_wrap(~age_bin)
 ```
 
-## Point means by age group, box plot
+##### Point means by age group, box plot
 
-```{r fig.align="center", fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.6a, exam score distributions by age group, box plot sequence", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
   ggplot(aes(x=age_bin, y = points)) +
@@ -214,7 +178,7 @@ lrn2014 %>%
       geom_boxplot()
 ```
 
-```{r fig.align="center", fig.width = 8, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.6b, exam score distributions by age-sex group, box plot sequence", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   mutate(age_bin = cut(age, breaks=seq(0,60,5))) %>% # Bin by age
   ggplot(aes(x=age_bin, y = points)) +
@@ -223,13 +187,13 @@ lrn2014 %>%
   facet_wrap(~gender)
 ```
 
-I see no correlation.
+I see no correlation between age and exam score in these plots.
 
-## Survey question category scores
+### 2.3 Correlation matrix
 
-Let's start with a correlation matrix, and let's throw age and gender in there again as well, for good measure.
+Finally, let us look at all the survey question scores together with the already explored variables in a correlation matrix.
 
-```{r fig.align="center", fig.width = 14, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 1.7, correlation matrix of all variables", fig.width = 8, results = 'hide'}
 lrn2014 %>%
   select(gender, age, surf, stra, deep, attitude, points) %>%
   ggpairs(aes(fill=gender, color=gender),lower=list(combo=wrap("facethist",binwidth=0.5))) # Have to add the lower arg so ggpairs doesn't complain
@@ -241,7 +205,7 @@ And a possitive correlation between `points` and `attitude`! This is the stronge
 
 There also seems to be a relationship between `attitude` and `gender`, but no relationship between `attitude` and `points`.
 
-# Regression
+## 3. Regression
 
 ```         
     Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters. If an explanatory variable in your model does not have a statistically significant relationship with the target variable, remove the variable from the model and fit the model again without it. (0-4 points)
@@ -249,19 +213,19 @@ There also seems to be a relationship between `attitude` and `gender`, but no re
 
 Based on the data exploration, `attitude` seems the most likely candidate, and next after that: `stra` and `surf`.
 
-### Simple regression as baseline
+### 3.1 Simple regression as baseline
 
 Let's start with a simple regression model of `points ~ attitude`, which will be our baseline.
 
 ```{r fig.align="center", fig.width = 10, fig.height= 10}
-simple_model <- lrn2014 %>%
+attitude_model <- lrn2014 %>%
                   lm(points ~ attitude, data = .)
-summary(simple_model)
+summary(attitude_model)
 ```
 
 There is clearly a statistically significant relationship between `attitude` and `points`. But R-squared is only around 18.5%, so there is a lot of variance not explained by the model.
 
-### Multiple regression, 3 variables
+### 3.2 Multiple regression, 3 variables
 
 ```{r fig.align="center", fig.width = 10, fig.height= 10}
 three_var_model <- lrn2014 %>%
@@ -272,74 +236,188 @@ summary(three_var_model)
 The adjusted R-squared is higher, which means our model is capturing more of the underlying interactions than before, although still below 20%.
 
 It seems that the relationship between `points` and `surf` is not statistically significant.
-And depending on what our choice of significance level would be in a hypothesis test, the interaction with `stra` might not be significant.
 
-But a p-value of 0.117 is good enough for a software engineer (me) to decide to use the variable in a regression model.
+
 Let's drop `surf` and keep `stra`, and try again.
 
-### Multiple regression, 2 variables
+### 3.3 Multiple regression, 2 variables
 
 ```{r fig.align="center",  fig.width = 10, fig.height= 10}
 two_var_model <- lrn2014 %>%
                   lm(points ~ attitude + stra, data = .)
 summary(two_var_model)
 ```
-Right, this is our best fit yet, we're going to select this one to analyze. Let's plot those plots.
+
+Right, this is our best fit yet, based on the adjusted R-squared.
+Depending on what our choice of significance level would be in a hypothesis test, the interaction with `stra` would be ignored.
+At a standard level of `a = 0.05`, we wouldn't reject the null hypothesis that `stra` has a linear effect on `points`.
+
+Let's test another model, with nothing but `stra`.
+
+#### 3.4 Simple regression with only `stra`
 
 ```{r fig.align="center",  fig.width = 10, fig.height= 10}
-par(mfrow=c(2,2))
-plot(two_var_model)
-par(mfrow=c(1,1))
-```
-
-The assumptions of the model are that:
- - the model is homoscedastic, the variance in the estimate given by the model is homogeneous.
- - the 
-#TODO: finish this
-
-The Scale-Location plot is also trending down very slightly.
-I don't think this means the data is heteroscedastic, it certainly doesn't look like it is.
-
-but I'm not so familiar with these visual checks, so I searched the web for a homoscedasticity test, and found the _Breusch-Pagan Test_ in the `lmtest` library.
-
-```{r}
-#install.packages(lmtest)
-library(lmtest)
-two_var_model_bptest <- bptest(two_var_model)
-two_var_model_bptest
+stra_model <- lrn2014 %>%
+                  lm(points ~ stra, data = .)
+summary(stra_model)
 ```
 
 
-A p-value of `0.6256` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
+We get very close to a statistically significant result at a standard significance level of `0.05`, but not quite.
+Let's drop `stra`, since that's what the assignment asked us to do.
 
-# Interpretation
+The model we will be using is therefore the baseline model with one predictor: `attitude`.
+
+### 3.4 Interpretation of the statistical test related to the model
+
+The statistical tests that are reported in the summary are:
+
+ - the t-test
+ - the F-test
+
+#### The t-test
+
+The t-test measures the correlation between each independent variable and the dependent variable, the test statistic is the _t-statistic_. 
+The null hypothesis of the t-test is that the coefficient is zero (there is no relationship between the predictor and the response).
+
+R reports the t-statistic on the same line as the estimated coefficients.
+The t-test also comes with a p-value associated with it.
+
+In our case, the t-test for `stra` gives us a p-value of 0.089, which means we could not reject a null-hypothesis with a 5% significance level.
+I also ran a separate test for `surf` (off-screen) which also got a p-value above 0.05.
+This is why both of the variables were dropped.
+
+The t-test for `attitude` gave a very small p-value (~4e-9), which means that we can reject the null-hypothesis at `a = 0.05` or even more stringent significance levels.
+
+#### The F-test
+
+The t-test measured the significance of individual regression coefficient fits; the F-test measures the _overall_ fit of the regression coefficients.
+The null hypothesis of the F-test is that all non-intercept coefficients are zero: in other words, that a single sample mean is as good a predictor as the linear model.
+
+The F-statistic is reported at the bottom along with the corresponding p-value.
+For single-predictor models, the p-values seem to correspond with the p-values of the t-test.
+
+In our case, we can reject the null hypothesis for all models that include the `attitude` predictor, since they are again very small numbers (the highest p-value being roughly 3e-8 for the three-variable model).
+This is another sign that this is the predictor we should use.
+
+
+## 4. Interpretation
 
 ```
     Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model. (0-3 points)
 ```
 
+### 4.1 Summary
+
+Let's rerun that summary:
+``` {r}
+summary(attitude_model)
+```
+
 The fitted regression coefficients are:
- - intercept: 8.9729
- - `attitude`: 3.4658 
- - `stra`: 0.9137
+ - intercept: 11.6372
+ - `attitude`: 3.5255
 
-Which means the that the model predicts the conditional mean of the exam scores, given the `attitude` and `stra`values as:
+Which means the that the model predicts the conditional mean of the exam scores, given an `attitude` value as:
 ```
-points = 8.9729 + 3.4628*attitude + 0.9137*stra
+points = 11.6372 + 3.5255*attitude
 ```
 
-The adjusted R-squared is 0.1951, which I believe means that when we compare the sum of residuals of predictions made by the model to a sum of residuals using the sample mean as a predicted value, the sum of residuals of the linear model is roughly 80% of the sum of residuals when using the sample mean as a predictor.
+If we multiply the attitude coefficient with the range of the attitude in the population, we can get an idea of how the model assigns expected exam scores based on a students `attitude`.
 
-In other words, if we know the values of `attitude` and `stra`, we can estimate the exam score of a student using the model with roughly 19% less expected error.
+``` {r}
+am <- mean(lrn2014$attitude)
+as <- sd(lrn2014$attitude)
+print("Range of predictor term within a sd:")
+3.5255*c(am-as, am, am+as)
 
-I'm not quite sure if this interpretation is exact, but it's what I was able to piece together from sources online, mostly wikipedia ([https://en.wikipedia.org/wiki/Coefficient_of_determination](https://en.wikipedia.org/wiki/Coefficient_of_determination)).
+print("Range of ŷ_i within a sd:")
+11.6732 + 3.5255*c(am-as, am, am+as)
+
+print("Range of ŷ_i within two sd's:")
+11.6732 + 3.5255*c(am-2*as, am, am+2*as)
 
 ```
-    Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots. (0-3 points)
 
-After completing all the phases above you are ready to submit your Assignment for the review (using the Moodle Workshop below). Have the two links (your GitHub repository and your course diary) ready!
+So, assuming `attitude` is Gaussian and that the sample stddev is a good estimate, the model assigns: an exam score:
+ - between 20.17975 and 25.32633 to a majority of students (about 68%, one stddev in a Gaussian captures 34.1% of the population)
+ - between 17.60646 and 27.89962 to a super-majority (95%) of students
+
+If we look back at the exam score distribution in figure 1.4, this does capture the mode of the distribution.
+
+### 3.2 Multiple R-squared
+
+The multiple R-squared value is 0.1906, the standard way to express this is that "19% of the variation in exam scores is explained by the `attitude` and `stra` variables" (see MABS4IODS, 3.2.1).
+
+I would interpret this to mean that, using the linear model, given `attitude`and `stra`, we estimate the expectation of the standard error of this prediction to be roughly 80% of what it would be when simply using the sample mean as a predictor.
+The estimation assumes the sample is representative, because we're using residuals to get this number.
+
+I'm not quite sure if this more elaborate interpretation is exact, but it's what I was able to piece together from sources online, mostly wikipedia ([https://en.wikipedia.org/wiki/Coefficient_of_determination](https://en.wikipedia.org/wiki/Coefficient_of_determination)).
+
+
+## 5. Regression diagnostics
+
 ```
+    Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots.
+```
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "2.0 Regression diagnostics", fig.height= 10}
+par(mfrow=c(2,2))
+plot(attitude_model)
+par(mfrow=c(1,1))
+```
+
+
+### 5.1 Assumptions 
+
+The assumptions of the model are that:
+ 1. the constant variance assumption (homoscedasticity)
+ 2. the normality assumption:
+ 3. there's a linear relationship between the predictor and the response
+
+
+
+#### The Residuals vs. Leverage
+
+The Residuals vs. Leverage plot checks that there aren't any influential outliers that are affecting the fit of the regression coefficients.
+The plot has a dashed line showing a critical Cooks's distance value. In our case this dashed line is not visible.
+Essentially, if a point is very far right and has a high standardized residual (off the central line), it's an higly influential point and will have to be looked into.
+
+A highly influential point may be an indication of a point that should be excluded, but this has to be done on a case-by-case basis.
+It might also mean that assumption 3 is violated, that there isn't a linear relationship between predictors and the response.
+
+
+#### The Residuals vs. Fitted plot
+
+The residuals vs fitted plot (and the scale-location plot) gives us a visual way to check for heteroscedasticity (violation of assumption 1).
+If the red mean-line is not horizontal, it means the residuals have a bias in some region of the response distribution (the vairance is not constant).
+
+I don't think this means the data is heteroscedastic, it certainly doesn't look like it is.
+But I'm not so familiar with these visual checks, so I searched the web for a homoscedasticity test, and found the _Breusch-Pagan Test_ in the `lmtest` library.
 
 ```{r}
-
+attitude_model_bptest <- bptest(attitude_model)
+attitude_model_bptest
 ```
+
+
+A p-value of `0.6256` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
+
+#### Normal QQ-plot
+
+
+
+This plot compares the "ideal" quantiles to the sample quantiles.
+This is used to test for normalcy by comparing the residual distribution against a theoretical normal distribution.
+
+There are some outliers at the bottom left, which may indicate a bimodal distribution (remember that the exam scores looked bimodal as well, fig 1.4).
+The plot also curves down a little at the upper end, which I believe usually indicates a light left skew.
+
+let's test the residuals for normalcy, using the Shapiro-Wilk test:
+```{r}
+shapiro.test(attitude_model[["residuals"]])
+```
+
+
+The p-value is quite small, 0.003, so we to reject the null hypothesis that the residuals are normally distributed.
+I think this means we need to transform the data, either the exam scores or the attitude, but I don't have the statistics chops to do that.

@@ -1,20 +1,26 @@
 
 # Chapter 1: About the project
 
+
+Here's the link to the repo on github:
+https://github.com/oj-lappi/IODS-project
+
+## My background and motivations
+
 I'd like to learn about statistical tests and possibly how to add R to data pipelines.
 
 I don't think R will replace my current tools for analyzing and plotting data, but I do want to at least see how feasible it would be to add R as a tool for developing statistical analyses for experiments, and possibly writing some small programs for quick statistical analysis in postprocessing of experiments.
 
 I'm familiar with _git_, it's a daily driver for me, I tend to use gnuplot and python for quick plotting, and either use _python_, _UNIX_ tools or custom _C++_ programs for data analysis utilities.
 
-Here's the link to the repo on github:
-https://github.com/oj-lappi/IODS-project
+
+
+## Goals
 
 I'm interested in creating automatic data pipelines that process data in object storage and upload plots to a dashboard.
+R+Github pages might be a good way to do that, although I would prefer an on-prem solution (HU's gitlab maybe?) or a self-hosted website.
 
-Github pages might be a good way to do that, although I would prefer an on-prem solution (HU's gitlab maybe?) or a self-hosted website.
-
-## ~~Personal Access Token~~ RStudio/Git integration
+## RStudio/Git integration
 
 I have ssh keys set up on each of my computers, and a personal access token would be less flexible than that.
 
@@ -24,41 +30,7 @@ I can push and pull with this setup from RStudio.
 
 I checked the exercises and followed some of them along locally, I think I'm getting the hang of it :).
 
-## Automatic knitting
 
-It should be possible to set up a git hook to knit before pushing.
-
-For this, I've created a shellscript called "knit", which is in this repo:
-```
-#!/bin/bash
-R --no-save <<< "rmarkdown::render(\"$(pwd)/index.Rmd\")"
-```
-
-This also makes it easier to work from the terminal, which I prefer to do, especially when it comes to git.
-Now we just need to write a git hook which checks if index.Rmd is newer than index.html, and runs knit if so, which we can do using a Makefile:
-
-```
-index.html: index.Rmd *.Rmd
-	./knit
-```
-
-Now, the git hook, which looks like this, it's not commited with git, and lives in `.git/hooks/pre-commit`:
-
-```
-#!/bin/sh
-make -q
-error_code=$?
-make || echo "Failed to knit index.html"
-
-if [ ${error_code} -ne 0 ]; then
-    git add index.html
-    echo "index.html was not up-to-date, it has now been updated. Please commit again"
-fi
-
-exit ${error_code}
-```
-
-Now, knitting is tied to running git commit, and the html file will always be up-to-date with the .Rmd files.
 
 
 ```{r}

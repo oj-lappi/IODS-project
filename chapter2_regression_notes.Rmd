@@ -1,0 +1,44 @@
+## Regression
+
+### MABS4IODS
+
+#### Errors and Residuals
+
+Error: |observation - truth|
+Residual: |observation - estimation|
+
+#### Simple linear and locally weighted regression
+
+```
+y_i = b_0 + b_1*x_i + e_i
+```
+
+ - y_i = response variable, dependent variable
+ - x_i = predictor, independent variable
+ - b_0 = intercept coefficient
+ - b_1 = regression coefficient
+ - e_i = error term
+
+
+`b_0` and `b_1` are estimated by minimizing the sum of squared difference of the residuals `|ŷ_i - y_i|`. The residuals estimate the error term `e_i`.
+
+
+#### Assumptions
+
+
+
+##### Q: Variation
+ 
+ Variation is mentioned again. The term "variance" is not used, but "variation".
+ I wonder if this is a handwavy way to describe variance measures without committing to a precise definition, or if "variation" has a precise definition itself.
+ 
+ #TODO: check wikipedia, or statistics handbook
+ 
+ 
+ 
+ 
+### Multiple Linear Regression
+ 
+ 
+ 
+

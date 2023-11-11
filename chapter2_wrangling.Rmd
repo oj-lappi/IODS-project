@@ -1,0 +1,44 @@
+## Wrangling
+
+I know we didn't have to write about the wrangling, but I found that we can actually run parts of the R-script in chunks by using labels! This is cool. All the code here is straight from the R-script.
+
+```{r cache=FALSE}
+knitr::read_chunk('data/assignment2_learning2014.R')
+```
+
+------------------------------------------------------------------------
+
+### Setup, libraries and variables
+
+```{r setup}
+```
+
+### Read the data
+
+```{r read_data}
+```
+
+### Wrangle it
+
+```{r wrangle_columns}
+```
+
+### Write it to a file
+
+```{r write_data}
+```
+
+### Check the consistency
+
+This is extra, but let's check that the data is serialized and parsed correctly.
+
+```{r check_data}
+```
+
+### Notes
+
+I did find one thing interesting. The backup analysis dataset provided on moodle has chopped some of the decimals off the attitude column, the values are rounded. In my cleaned dataset, this is not the case, the numbers have higher precision but some floating point error in the right-hand decimals.
+
+I wonder what the reason for this discrepancy is, maybe I should have called a rounding function at some point?
+
+------------------------------------------------------------------------
