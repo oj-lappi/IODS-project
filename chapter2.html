@@ -377,7 +377,7 @@ library(dplyr)</code></pre>
 ##     as.Date, as.Date.numeric</code></pre>
 <pre class="r"><code># Timestamp
 date()</code></pre>
-<pre><code>## [1] &quot;Sat Nov 11 18:36:13 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Sun Nov 12 12:46:53 2023&quot;</code></pre>
 </div>
 <div id="analysis" class="section level2">
 <h2>2. Analysis</h2>
@@ -855,8 +855,8 @@ this is that “19% of the variation in exam scores is explained by the
 3.2.1).</p>
 <p>I would interpret this to mean that, using the linear model, given
 <code>attitude</code>and <code>stra</code>, we estimate the expectation
-of the standard error of this prediction to be roughly 80% of what it
-would be when simply using the sample mean as a predictor. The
+of the standard error (squared) of this prediction to be roughly 80% of
+what it would be when simply using the sample mean as a predictor. The
 estimation assumes the sample is representative, because we’re using
 residuals to get this number.</p>
 <p>I’m not quite sure if this more elaborate interpretation is exact,

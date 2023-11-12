@@ -349,7 +349,7 @@ If we look back at the exam score distribution in figure 1.4, this does capture 
 
 The multiple R-squared value is 0.1906, the standard way to express this is that "19% of the variation in exam scores is explained by the `attitude` and `stra` variables" (see MABS4IODS, 3.2.1).
 
-I would interpret this to mean that, using the linear model, given `attitude`and `stra`, we estimate the expectation of the standard error of this prediction to be roughly 80% of what it would be when simply using the sample mean as a predictor.
+I would interpret this to mean that, using the linear model, given `attitude`and `stra`, we estimate the expectation of the standard error (squared) of this prediction to be roughly 80% of what it would be when simply using the sample mean as a predictor.
 The estimation assumes the sample is representative, because we're using residuals to get this number.
 
 I'm not quite sure if this more elaborate interpretation is exact, but it's what I was able to piece together from sources online, mostly wikipedia ([https://en.wikipedia.org/wiki/Coefficient_of_determination](https://en.wikipedia.org/wiki/Coefficient_of_determination)).
