@@ -1,0 +1,124 @@
+## Extra: Let's grade on a curve!
+
+Okay, so if the problem is that the grading scale is not uniform, let's transform the exam scores into standard deviations, inspired by the Finnish lukio matriculation exam.
+
+There's probably a better way to do this, but I will just hardcode the quantiles of a normal distribution at intervals of standard deviations from the mean (1 and 2 standard deviations in each direction, plus a tail bin at each end).
+We're sort of doing a low-fidelity transformation of the exam scores into a normal distribution.
+
+Let's plot that to make sure the quantiles were calculated correctly.
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "3.0 Grading by standard deviation from median", fig.height= 10}
+
+library(tibble)
+lrn2014 <- lrn2014 %>%
+          add_column(quantile 
+             = as.numeric(
+              cut(lrn2014$points,
+                  breaks=quantile(
+                              lrn2014$points,
+                              probs = c(0,0.022, 0.1582, 0.5, 0.8418,0.978, 1)
+                  ),
+                  include.lowest = T)))
+
+lrn2014 %>%
+  group_by(quantile) %>%
+  ggplot(aes(x=points)) +
+  geom_histogram(boundary=0,binwidth=1, aes(fill=factor(quantile)))
+```
+
+```{r}
+spec(lrn2014)
+class(lrn2014)
+```
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "3.1 Regression diagnostics with gaussian standard deviation quantiles", fig.height= 10}
+attitude_quantile_model <- lrn2014 %>%
+                  lm(quantile ~ attitude, data = .)
+summary(attitude_quantile_model)
+par(mfrow=c(2,2))
+plot(attitude_quantile_model)
+par(mfrow=c(1,1))
+```
+
+The R-squared is worse, but that QQ-plot looks much better now.
+There is a lower resolution, and the regression will always be at least somewhat wrong because the true values are always integers.
+So maybe the issue is in the discretization?
+Maybe this works well if we get use the CDF value instead of binned quantiles.
+
+Let's try that.
+
+
+``` {r}
+x <- seq(0,100,1)
+lin_df <- tibble(x=x, y=x)
+square_df <- tibble(x=x, y=x*x)
+lin_df %>% ggplot(aes(x=x, color=y, y=y)) + geom_point()
+square_df %>% ggplot(aes(x=x, color=y, y=y)) + geom_point()
+```
+
+### Ok, let's use cumulative frequency/estimated cumulative probability
+
+We apparently need the `spatstat` package for this.
+
+``` {r}
+#install.packages("spatstat")
+library(spatstat)
+```
+
+We don't have the exact CDF, so we will use the samples relative cumulative frequency as an estimate.
+Let's calculate that at each sample and plot it for visual verification, we should get a smooth gradient from left ot right, and each bar should have the same color.
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "3.2 Cumulative frequency per point value", fig.height= 10}
+crf <- CDF(density(lrn2014$points))
+lrn2014 <- lrn2014 %>%
+  add_column(crf = crf(lrn2014$points))
+
+par(mfrow=c(2,2))
+lrn2014 %>%
+  ggplot(aes(x=points, fill=factor(crf))) +
+  #scale_fill_discrete(low="red", high="blue") +
+  geom_histogram(boundary=0,binwidth=1)
+
+lrn2014 %>%
+  ggplot(aes(x=points, y=crf, color=crf)) +
+  geom_point() +
+  scale_colour_gradient(low="red", high="blue")
+```
+Ok, so that should estimate the CDF.
+Now let's do something a little naughty and map that CDF onto a standard normal distributions z-score (how many standard deviations from the mean) by calling `qnorm` on the value.
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "3.2 Cumulative frequency per point value", fig.height= 10}
+lrn2014 <- lrn2014 %>%
+  add_column(z = as.numeric(qnorm(lrn2014$crf)))
+
+lrn2014 %>%
+  ggplot(aes(x=points)) +
+  geom_histogram(boundary=0, binwidth=1, aes(fill=factor(z))) + scale_fill_discrete(name="z")
+
+lrn2014 %>%
+  ggplot(aes(x=points, y=z, color=z)) +
+  geom_point() +
+  scale_color_gradient(low="red", high="blue")
+
+```
+
+Nice, now let's fit that model again!
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "3.3 Regression diagnostics with cumulative frequencise", fig.height= 10}
+attitude_freq_model <- lrn2014 %>%
+                  lm(z ~ attitude, data = .)
+summary(attitude_freq_model)
+par(mfrow=c(2,2))
+plot(attitude_freq_model)
+par(mfrow=c(1,1))
+```
+
+It's worse!
+I guess we lost the normalcy... we would need to reformulate the CDF in terms of standard deviations...
+
+### Just standardize the score! 
+
+```{r}
+spec(lrn2014)
+```
+Ok, so we can get the CDF p, now we could feed it into an inverse CDF of a normally distributed value!
