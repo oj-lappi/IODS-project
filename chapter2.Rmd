@@ -420,4 +420,47 @@ shapiro.test(attitude_model[["residuals"]])
 
 
 The p-value is quite small, 0.003, so we to reject the null hypothesis that the residuals are normally distributed.
-I think this means we need to transform the data, either the exam scores or the attitude, but I don't have the statistics chops to do that.
+
+Hmm, maybe the issue is the grading scale?
+
+#### Let's grade on a curve!
+
+Okay, so if the problem is that the grading scale is not uniform, let's transform the exam scores into standard deviations, inspired by the Finnish lukio matriculation exam.
+
+There's probably a better way to do this, but I will just hardcode the quantiles of a normal distribution at intervals of standard deviations from the mean (1 and 2 standard deviations in each direction, plus a tail bin at each end).
+We're sort of doing a low-fidelity transformation of the exam scores into a normal distribution.
+
+Let's plot that to make sure the quantiles were calculated correctly.
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "2.1 Grading by standard deviation from median", fig.height= 10}
+lrn2014 <- lrn2014 %>%
+  mutate(quantile 
+          = as.numeric(
+              cut(lrn2014$points,
+                  breaks=quantile(
+                              lrn2014$points,
+                              probs = c(0,0.022, 0.1582, 0.5, 0.8418,0.978, 1)
+                  ),
+                  include.lowest = T)))
+lrn2014 %>%
+  group_by(quantile) %>%
+  ggplot(aes(x=points)) +
+  geom_histogram(boundary=0,binwidth=1, aes(fill=factor(quantile)))
+```
+
+
+
+```{r fig.align="center",  fig.width = 10, fig.cap = "2.0 Regression diagnostics with gaussian standard deviation quantiles", fig.height= 10}
+attitude_quantile_model <- lrn2014 %>%
+                  lm(quantile ~ attitude, data = .)
+summary(attitude_quantile_model)
+par(mfrow=c(2,2))
+plot(attitude_quantile_model)
+par(mfrow=c(1,1))
+```
+
+The R-squared is worse, but that QQ-plot looks much better now.
+There is a lower resolution, so this way of doing things is much worse.
+
+Ok, I don't think I have the statistics chops to go further from here.
+
