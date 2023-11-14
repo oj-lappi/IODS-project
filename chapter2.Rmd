@@ -402,7 +402,7 @@ attitude_model_bptest
 ```
 
 
-A p-value of `0.6256` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
+A p-value of `0.95` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
 
 #### Normal QQ-plot
 
