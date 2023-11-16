@@ -61,3 +61,45 @@ unlink(zip_archive)
 unlink(inner_archive)
 #read_csv(student_mat)
 ```
+
+
+```{r}
+library(tibble)
+sm <- read_csv("data/student_mat.csv") %>% mutate(mat_id = row_number())
+sp <- read_csv("data/student_por.csv") %>% mutate(por_id = row_number())
+
+#sm <- read_csv("data/student_mat.csv") %>% add_column(mat_id = row_number())
+#sp <- read_csv("data/student_por.csv") %>% add_column(por_id = row_number())
+```
+
+
+```{r}
+key <- colnames(sp)
+key <- key[! key %in% c("failures", "paid", "absences", "G1", "G2", "G3", "por_id")]
+key
+```
+
+## Do a questionable join
+
+```{r}
+merged = inner_join(sm, sp, by = key) %>% mutate(id_same = mat_id == por_id)
+merged
+sum(merged$id_same)
+dim(merged)
+dim(sm)
+dim(sp)
+
+library(ggplot2)
+merged_uniq <- merged %>% distinct(.keep_all = TRUE) 
+merged%>% ggplot(aes(x=mat_id, fill = factor(por_id))) + geom_histogram(binwidth=1) + guides(fill="none")
+```
+
+```{r}
+merged %>% ggplot(aes(x=por_id, fill=factor(mat_id))) + geom_histogram(binwidth=1) + guides(fill="none")
+```
+
+```{r}
+dim(merged_uniq)
+dim(merged)
+class(merged)
+```
