@@ -194,9 +194,9 @@ I see no correlation between age and exam score in these plots.
 Finally, let us look at all the survey question scores together with the already explored variables in a correlation matrix.
 
 ```{r fig.align="center", fig.cap = "fig. 1.7, correlation matrix of all variables", fig.width = 8, results = 'hide'}
-lrn2014 %>%
-  select(gender, age, surf, stra, deep, attitude, points) %>%
-  ggpairs(aes(fill=gender, color=gender),lower=list(combo=wrap("facethist",binwidth=0.5))) # Have to add the lower arg so ggpairs doesn't complain
+#lrn2014 %>%
+  #select(gender, age, surf, stra, deep, attitude, points) %>%
+  #ggpairs(aes(fill=gender, color=gender),lower=list(combo=wrap("facethist",binwidth=0.5))) # Have to add the lower arg so ggpairs doesn't complain
 ```
 
 There seem to be negative correlations between: - `surf` and `deep` (but seemingly only strongly for male students) - `attitude` and `deep` (weak, but stronger for male students again) - `stra` and `surf` (weak)
@@ -261,7 +261,6 @@ stra_model <- lrn2014 %>%
                   lm(points ~ stra, data = .)
 summary(stra_model)
 ```
-
 
 We get very close to a statistically significant result at a standard significance level of `0.05`, but not quite.
 Let's drop `stra`, since that's what the assignment asked us to do.
@@ -336,7 +335,7 @@ print("Range of ŷ_i within a sd:")
 
 print("Range of ŷ_i within two sd's:")
 11.6732 + 3.5255*c(am-2*as, am, am+2*as)
-
+spec(lrn2014)
 ```
 
 So, assuming `attitude` is Gaussian and that the sample stddev is a good estimate, the model assigns: an exam score:
@@ -395,13 +394,15 @@ If the red mean-line is not horizontal, it means the residuals have a bias in so
 I don't think this means the data is heteroscedastic, it certainly doesn't look like it is.
 But I'm not so familiar with these visual checks, so I searched the web for a homoscedasticity test, and found the _Breusch-Pagan Test_ in the `lmtest` library.
 
+
+
 ```{r}
 attitude_model_bptest <- bptest(attitude_model)
 attitude_model_bptest
 ```
 
 
-A p-value of `0.6256` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
+A p-value of `0.95` means that there is definitely very little evidence that the model is heteroscedastic. Ok, good! The trend has to be much clearer than that then.
 
 #### Normal QQ-plot
 
@@ -420,4 +421,6 @@ shapiro.test(attitude_model[["residuals"]])
 
 
 The p-value is quite small, 0.003, so we to reject the null hypothesis that the residuals are normally distributed.
-I think this means we need to transform the data, either the exam scores or the attitude, but I don't have the statistics chops to do that.
+
+Hmm, maybe the issue is the grading scale? I've tried to fix this, and I can ge the QQ-plot to look nicer with some transformations, but it makes the model test statistics worse.
+This is the best I can do for now.
