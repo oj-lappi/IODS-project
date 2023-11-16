@@ -1,0 +1,63 @@
+```{r}
+
+dataset_url <- "https://www.archive.ics.uci.edu/static/public/320/student+performance.zip"
+#dataset_url <- "data/student_performance.dat" #use local file if there is no internet connection
+outfile <- "data/student_performance.csv"
+
+library(readr)
+library(dplyr)
+
+# ---- read_data
+
+zip_archive <- tempfile()
+workdir <-tempfile()
+download.file(dataset_url, zip_archive)
+# There's two zip files, one inside the other
+unzip(zipfile = zip_archive, exdir = workdir)
+unzip(zipfile = file.path(workdir,"student.zip"), exdir = workdir)
+
+# There's two csv files, but they field-separator is actually a semicolon
+student_por <- read_delim(file.path(workdir,"student-por.csv"), delim=";")
+student_mat <- read_delim(file.path(workdir,"student-mat.csv"), delim=";")
+
+```
+
+### TODO: Join the two datasets
+
+```{r}
+student_mat
+```
+
+```{r}
+unzip(zipfile = workdir)
+
+write(unz(zip_archive, "student.zip"), inner_archive)
+
+student_mat <- unz(inner_archive, "student_mat.csv")
+student_por <- unz(inner_archive, "student_por.csv")
+
+
+```
+```{r}
+scan(unz(zip_archive, "student.zip"))
+```
+
+```{r}
+zip_archive
+```
+
+```{r}
+inner_archive
+```
+
+```{r}
+read_csv(student_mat)
+```
+
+```{r}
+read_csv(student_mat)
+
+unlink(zip_archive)
+unlink(inner_archive)
+#read_csv(student_mat)
+```
