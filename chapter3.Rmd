@@ -1,0 +1,142 @@
+# Assignment 3: Logistic regression
+
+## 1. Get the data
+
+```{r}
+library(dplyr)
+library(readr)
+data_url <- "https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv"
+df <- read_csv(data_url)
+```
+
+## 2. Summary of variables
+
+
+The variables in the data set are:
+
+```{r}
+colnames(df)
+```
+
+
+The dataset contains student school performance data averaged over two courses: portuguese and mathematics (the variables are: G1, G2, G3, absences, failures, paid). To be exact, the "paid" column is only from one of the courses.
+The other variables are demographic and social, the social variables were collected using surveys.
+
+Two variables: alc_use and high_use are transformations of the original dataset added for this assignment.
+alc_use is the average alcohol use per day, combining self-reported weekday and weekend usage on a scale of 1 to 5.
+high_use is a boolean indicating whether the alc_use variable is more than 2.
+
+## 3. Choose 4 interesting variables in the data to study in relation to alcohol use
+
+I choose:
+
+ - Fedu: Father's education level
+ - Medu: Mother's education level
+ - absences: number of absences on average per course
+ - G3: final course grade average
+ 
+ My hypotheses is:
+ 
+  - parents education levels (Fedu,Medu) has a small but significant impact on the likelihood of the high_use variable.
+  - increase in absences incrreases likelihood of high alcohol usage
+  - decrease in grades increases likelihood of high alcohol usage
+  
+  
+
+## 4. Explore variables
+
+```
+Numerically and graphically explore the distributions of your chosen variables and their relationships with alcohol consumption (use for example cross-tabulations, bar plots and box plots). Comment on your findings and compare the results of your exploration to your previously stated hypotheses. (0-5 points)
+
+```
+
+```{r fig.align="center", fig.cap = "fig. 1.1, correlation matrix of variables, colored by high_use value", fig.width = 10, results = 'hide'}
+library(ggplot2)
+library(GGally)
+df %>% select(alc_use, high_use, Fedu, Medu, absences, G3) %>%
+  ggpairs(aes(fill=high_use, color=high_use))
+```
+
+
+ - It turns out that the dataset shows absolutely no correlation between parent's education and alcohol usage.
+ - Fedu is very highly correlated with Medu though, which is not surprising but interesting to note, people seem to marry within their social class.
+ - absences has a very high correlation with alcohol use
+ - grades have a slightly smaller negative correlation with alcohol use
+ 
+ Two out of four hypotheses seem to have some support in the data after this exploration.
+ 
+## 5. Logistic regression
+ 
+Let's do a logistic regression model using the two statistically significant correlations: G3 and absences.
+ 
+```{r}
+model <- glm(high_use ~ G3 + absences, data = df, family = "binomial")
+summary(model)
+```
+
+Both G3 and absences have a p-value of less than 0.5 for the Wald tests of the fit, but we have a better test that's easier to interpret, the confidence intervals from the model.
+
+
+### 5.1 Odds ratio
+
+```{r}
+coeffs <- coefficients(model)
+odds_ratio <- coeffs %>% exp
+odds_ratio
+```
+
+The odds ratios for G3 and absences are roughly 0.926 and 1.088
+For G3, the OR is less than one because the correlation between the variables is negative.
+
+The way to interpret these is that:
+ - for each decrease in final grade average, the odds increase by roughly 8.0% that a student has high alcohol use (1/0.9267 ~= 1.08)
+ - for each increase in absences per course, the odds increase by roughly 8.7% that a student has high alcohol use
+
+But that's just the average effect the model has fit, let's look at confidence intervals in the odds ratio
+
+### 5.2 Confidence intervals
+
+```{r}
+ci <- confint(model) %>% exp
+ci
+```
+
+The 95% confidence intervals are both on one side of unity, so we can say with 95% certainty that there is an effect for both variables, and the effect increases the odds by:
+ - a factor in the range of [1.007, 1.15] for each decrease in final grade average (again,inverting the odds ratio because the effect is negative)
+ - a factor in the range of [1.04, 1.14] for each increase in absences per course
+ 
+### 5.3 Interpretation
+
+There is an effect, although the final grade average effect goes damn near 1 at the low end of the confidence interval, the unit increase in odds is only 0.7%!
+For absences, the confidence interval is a little tighter, but it still seems a little wide to me for practical use. We would need more samples in order to get a tighter interval.
+
+The two hypotheses that survived the initial exploration both match the outcomes of the logistic regression, and now we can quantify the quality of an estimate of the effect.
+
+## 6. Predictions
+
+```
+Using the variables which, according to your logistic regression model, had a statistical relationship with high/low alcohol consumption, explore the predictive power of you model. Provide a 2x2 cross tabulation of predictions versus the actual values and optionally display a graphic visualizing both the actual values and the predictions. Compute the total proportion of inaccurately classified individuals (= the training error) and comment on all the results. Compare the performance of the model with performance achieved by some simple guessing strategy. (0-3 points)
+```
+
+Let's test out the model with a confusion matrix.
+
+```{r}
+probabilities <- predict(model, type = "response")
+df <- df %>% 
+        mutate(probability = probabilities) %>%
+        mutate(prediction = probability > 0.5)
+
+table(high_use = df$high_use, prediction = df$prediction) %>%
+        prop.table %>%
+        addmargins
+```
+
+The confusion matrix tells us that the model has a false positive rate of ~2% and a false negative rate of ~26%. That's pretty good! High false negative rates are not so bad, they are just missed cases. High false positives would mean that the model is unreliable and cannot be used as an indicator (in _this_ case. The importance of different error types depend on the specific use case and the meaning of negative and positive).
+
+On the other hand, the confusion matrix also tells us that the model preficts 94% of all students to have non-high alcohol use, while in reality the number is 70%.
+So the model achieves this relative safe indicator status by being rather conservative.
+
+### Caveat
+
+We haven't done a split into a model fit dataset and a validation set, so this confusion matrix is of limited value.
+ 

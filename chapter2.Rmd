@@ -1,4 +1,4 @@
-# Chapter 2: Linear regression on the Learning2014 dataset
+# Assignment 2: Linear regression on the Learning2014 dataset
 
 ## 1. Reading the data
 

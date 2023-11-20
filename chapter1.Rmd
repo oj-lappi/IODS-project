@@ -1,5 +1,5 @@
 
-# Chapter 1: About the project
+# Assignment 1: About the project
 
 
 Here's the link to the repo on github:
