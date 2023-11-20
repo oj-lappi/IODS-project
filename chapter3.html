@@ -531,7 +531,6 @@ quality of an estimate of the effect.</p>
 </div>
 <div id="predictions" class="section level2">
 <h2>6. Predictions</h2>
-<pre><code>Using the variables which, according to your logistic regression model, had a statistical relationship with high/low alcohol consumption, explore the predictive power of you model. Provide a 2x2 cross tabulation of predictions versus the actual values and optionally display a graphic visualizing both the actual values and the predictions. Compute the total proportion of inaccurately classified individuals (= the training error) and comment on all the results. Compare the performance of the model with performance achieved by some simple guessing strategy. (0-3 points)</code></pre>
 <p>Let’s test out the model with a confusion matrix.</p>
 <pre class="r"><code>probabilities &lt;- predict(model, type = &quot;response&quot;)
 df &lt;- df %&gt;% 

@@ -377,15 +377,10 @@ library(dplyr)</code></pre>
 ##     as.Date, as.Date.numeric</code></pre>
 <pre class="r"><code># Timestamp
 date()</code></pre>
-<pre><code>## [1] &quot;Tue Nov 21 00:43:48 2023&quot;</code></pre>
+<pre><code>## [1] &quot;Tue Nov 21 00:57:51 2023&quot;</code></pre>
 </div>
 <div id="analysis" class="section level2">
 <h2>2. Analysis</h2>
-<pre><code>Analysis (max 15 points)
-
-
-The focus of your work should be on the clarity of your report.
-For full points you should be able to show an understanding of the methods and results used in your analysis.</code></pre>
 <pre class="r"><code>lrn2014 &lt;- read_csv(&#39;data/learning2014.csv&#39;)</code></pre>
 <pre><code>## Rows: 166 Columns: 7
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -620,7 +615,6 @@ and <code>gender</code>, but no relationship between
 </div>
 <div id="regression" class="section level2">
 <h2>3. Regression</h2>
-<pre><code>    Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters. If an explanatory variable in your model does not have a statistically significant relationship with the target variable, remove the variable from the model and fit the model again without it. (0-4 points)</code></pre>
 <p>Based on the data exploration, <code>attitude</code> seems the most
 likely candidate, and next after that: <code>stra</code> and
 <code>surf</code>.</p>
@@ -794,7 +788,6 @@ we should use.</p>
 </div>
 <div id="interpretation" class="section level2">
 <h2>4. Interpretation</h2>
-<pre><code>    Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model. (0-3 points)</code></pre>
 <div id="summary" class="section level3">
 <h3>4.1 Summary</h3>
 <p>Let’s rerun that summary:</p>
@@ -875,7 +868,6 @@ wikipedia (<a href="https://en.wikipedia.org/wiki/Coefficient_of_determination">
 </div>
 <div id="regression-diagnostics" class="section level2">
 <h2>5. Regression diagnostics</h2>
-<pre><code>    Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots.</code></pre>
 <pre class="r"><code>par(mfrow=c(2,2))
 plot(attitude_model)</code></pre>
 <div class="figure" style="text-align: center">
