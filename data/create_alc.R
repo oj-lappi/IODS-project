@@ -30,12 +30,29 @@ unlink(workdir)
 
 key <- colnames(student_por)
 key <- key[! key %in% c("failures", "paid", "absences", "G1", "G2", "G3", "por_id")]
-merged <- inner_join(sm, sp, by = key, suffix = c(".mat", ".por")) %>% distinct(.keep_all = TRUE) %>% select(-c(por_id,mat_id))
+merged <- inner_join(student_mat, student_por, by = key, suffix = c(".mat", ".por")) %>% distinct(.keep_all = TRUE) %>% select(-c(por_id,mat_id))
 
-# ---- create_alcohol_use_columns
+# ---- create_averages
 
-#TODO: create columns
+course_vars <- c("failures", "paid", "absences", "G1", "G2", "G3")
+for (col in course_vars) {
+  columns <- select(merged, starts_with(col))
+  if (is.numeric(select(columns,1)[[1]])) {
+    merged[col] = round(rowMeans(columns))
+  } else {
+    merged[col] = select(columns,1)
+  }
+}
+
+# ---- create_alc_use_cols
+
+merged <- merged %>% 
+  mutate(alc_use = (Dalc + Walc) / 2) %>%
+  mutate(high_use = alc_use > 2) %>%
+  select(!ends_with(".mat")) %>% select(!ends_with(".por"))
 
 # ---- write_merged_data
   
-write_csv(merged, "data/student_performance.csv", quote="all")
+write_csv(merged, "data/alc.csv")
+
+# Instead of glimpsing, I've verified the output by diffing against https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv
