@@ -244,7 +244,8 @@ twcss4 <- sapply(1:10, function(k){set.seed(130); kmeans(Boston, k)$tot.withinss
 twcss5 <- sapply(1:10, function(k){set.seed(949); kmeans(Boston, k)$tot.withinss})
 
 df <- as.data.frame(tibble(twcss1,twcss2,twcss3,twcss4,twcss5, k= seq(1,10)))
-df$twcss <- rowMeans(select(df,c(twcss1,twcss2,twcss3,twcss4,twcss5)))
+
+df <- df %>% rowwise() %>% mutate(twcss = mean(c(twcss1,twcss2,twcss3,twcss4,twcss5)))
 df <- df %>% rowwise() %>% mutate(twcss_var = var(c(twcss1,twcss2,twcss3,twcss4,twcss5)))
 df %>% ggplot(aes(x=k, y=twcss)) +
   geom_line() +
