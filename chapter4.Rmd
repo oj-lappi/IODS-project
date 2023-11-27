@@ -1,0 +1,326 @@
+# Assignment 4: Classification and Clustering
+
+## 1. Overview
+
+This assignment is about classification and clustering.
+We're looking at a dataset put together from sensus data, and seeing how crime rate varies across multiple correlated variables.
+
+The methods used are linear discriminant analysis (LDA) and k-means clustering.
+
+## 2. The dataset
+
+```
+Load the Boston data from the MASS package. Explore the structure and the dimensions of the data and describe the dataset briefly, assuming the reader has no previous knowledge of it. Details about the Boston dataset can be seen for example here (https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html). (0-1 points)
+```
+
+
+```{r}
+library(MASS)
+data("Boston")
+```
+
+### Dataset structure
+
+```{r}
+str(Boston)
+```
+
+
+
+There are 506 rows with 14 columns.
+The dataset seems to originally have been put together to analyze housing values across the suburbs.
+From the paper cited on the stat.ethz.ch site: *"Harrison, D. and Rubinfeld, D.L. (1978) Hedonic housing prices and the demand for clean air"*, we can find that a row represents a "SMSA census tract", so, a census area in Boston containing some number of housing units.
+
+The columns contain social statistics related to these census areas (e.g. `crim` = crime rate, `ptratio` = pupil-teacher ratio), data about the housing units in the area (`rm` = avg # of rooms per unit, `medv` = median housing unit value, `age` = prop. houses built before 1940), and data about the location of the area (e.g. `dis` = weighted mean of distances to employment centers, `chas` = 1 if by Charles River, 0 if not by Charles River).
+
+Some of the columns are a little counter-intuitive or difficult to interpret. E.g., the column `age` is the proportion of houses built before 1940, and the column `lstat` is the proportion of the population that is lower status. From the Harrison & Rubinfield paper, lower status means: "1/2 * (proportion of adults without some hig h school education and proportion of male workers classified as laborers)".
+
+---
+
+Ok, before we move forward, we did see  a small issue here, let's change `chas` from an integer to a boolean.
+
+```{r}
+library(dplyr)
+Boston_explore <- Boston %>% mutate(chas = chas == 1)
+str(Boston_explore)
+```
+
+---
+
+### Summary
+
+```
+Show a graphical overview of the data and show summaries of the variables in the data. Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them. (0-2 points)
+```
+
+```{r}
+summary(Boston_explore)
+```
+
+Looking at this summary, all columns are definitely not created equal.
+I am mostly looking at the difference between the mean and median, which --- if they differ by much --- can indicate that a variable is not normally distributed.
+Some of the columns are close to normal distributions, but e.g. `zn` has a median of 0 and a mean of 11.36. Other highly skewed columns are `rad`, `crim`, `tax`, `chas`, and `black`.
+
+## 3. Graphical summary 
+
+### With ggpairs
+
+```{r fig.align="center", fig.cap = "fig. 3.1, Correlation matrix", fig.width = 16, fig.height = 16, results = 'hide'}
+library(ggplot2)
+library(GGally)
+Boston_explore %>%
+  ggpairs(lower=list(combo=wrap("facethist",binwidth=0.5))) # Have to add the lower arg so ggpairs doesn't complain
+```
+
+Ok, lot's to unpack here, let's start with the a visual check of each variable's distribution (the diagonal).
+Almost none of the columns look normally distributed, with perhaps the exception of `rm`, the number of rooms.
+
+There are lots of interesting correlations, just looking at the scatter plots, the three values `rm`, `medv`, and `lstat` seem to have strikingly strong relationships with each other with `medv`, which makes sense to me.
+
+The `rad` variable, which is an "index of accessibility to radial highways, is clearly a bimodal, or one could even say a split distribution. A subset of areas have a much higher index than the others, and in the scatter plots, this clearly visible line of that higher-index population seems to consistently cover different ranges of the other variable than the lower-index population.
+The effect is most clearly noticeable in the `crim`, `tax`, `nox`, `dis` and `black` scatter plots.
+
+`dis` and `nox` also have a strikingly logarithmic-looking relationship.
+
+In general, nearly every variable seems to be correlated with every other variable, excepting the `chas` (area is by the Charles river) column.
+
+### With corrplot
+
+```{r fig.align="center", fig.cap = "fig. 3.2, Correlation matrix with corrplot", fig.width = 10, fig.height = 10, results = 'hide'}
+library(corrplot)
+corrplot(cor(Boston_explore), method="circle")
+```
+
+Using corrplot, we lose some information, but get a better overview of where the correlations are strongest.
+
+We see strong correlations (large balls) between:
+ - `dis` and (`zn`, `indus`, `nox`, and `age`)
+ - `tax` and `rad`, and this is a *very* strong correltaion, they seem to capture much of the same variation within them
+ - `tax` and (`crim`, `indus`, and `nox`)
+ - ditto for `rad`
+ - `lstat` and `medv`
+
+
+## 4. Standardize and summarize
+
+
+```
+Standardize the dataset and print out summaries of the scaled data. How did the variables change? Create a categorical variable of the crime rate in the Boston dataset (from the scaled crime rate). Use the quantiles as the break points in the categorical variable. Drop the old crime rate variable from the dataset. Divide the dataset to train and test sets, so that 80% of the data belongs to the train set. (0-2 points)
+```
+
+Let's run the `scale` function on the dataset.
+
+```{r}
+Boston_scaled <- as.data.frame(scale(Boston_explore))
+summary(Boston_scaled)
+```
+
+We've now normalized the columns by subtracting the mean and dividing by the standard deviation such that, if they were normally distributed, they would now be standard normally distributed.
+
+### Create a categorical crime rate column
+
+```{r}
+# Create quartile class
+Boston_scaled$crim <- as.numeric(Boston_scaled$crim)
+Boston_scaled$crime <- cut(Boston_scaled$crim, breaks = quantile(Boston_scaled$crim), include.lowest = TRUE, label=c("low", "med_low", "med_high", "high"))
+
+# Drop crim
+Boston_scaled <- dplyr::select(Boston_scaled, -crim)
+```
+
+We've split the crime rate column into a categorical variable defining in which quartile of the crime rate distribution the sensus area is in.
+
+### Create training and test datasets
+
+```{r}
+set.seed(179693716) 
+n <- nrow(Boston_scaled)
+split <- sample(n,  size = n * 0.8)
+
+train <- Boston_scaled[split,]
+test <- Boston_scaled[-split,]
+```
+
+Now we've split the dataset into two: 80% of rows are in the training set, 20% are in the test set.
+
+## 5. Linear discriminant analysis
+
+```
+Fit the linear discriminant analysis on the train set. Use the categorical crime rate as the target variable and all the other variables in the dataset as predictor variables. Draw the LDA (bi)plot. (0-3 points)
+```
+
+```{r}
+lda.fit <- lda(crime ~ ., data = train)
+lda.fit
+```
+
+### Biplot
+
+```{r fig.align="center", fig.cap = "fig. 5.1 LDA biplot", fig.width = 16, fig.height = 16, results = 'hide'}
+arrows <- function(x, scale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  graphics::arrows(x0 = 0, y0 = 0, 
+         x1 = scale * heads[,choices[1]], 
+         y1 = scale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(scale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crime)
+
+plot(lda.fit, dimen = 2, col=classes, pch=classes)
+arrows(lda.fit, scale = 1.5, color = "#ee8855")
+```
+
+
+We see that out of the two first linear discriminants, LD1 nearly perfectly separates the data into two clusters: those with high crime rate, and those with other values.
+`rad` has the clearly highest coefficient in LD1, which can be seen both from the biplot and the LDA summary.
+
+LD2 seems to find another axis within the data that explains a smaller effect. The largest coefficients in LD2 belong to `nox`, `medv`, and `zn`.
+
+## 6. Validation in test set
+
+```{r}
+# Drop the result variables
+facit <- test$crime
+test <- dplyr::select(test, -crime)
+```
+
+Let's predict the crime rate quartiles in the test set and cross tabulate:
+
+```{r}
+# Predict classes in the test data
+lda.pred <- predict(lda.fit, newdata = test)
+
+# Do a confusion matrix
+tab <- table(correct = facit, predicted = lda.pred$class)
+tab
+nrow(test)
+```
+
+and here's the same table as a confusion matrix:
+
+```{r fig.align="center", fig.cap = "fig. 6.1 Confusion matrix of the LDA fit", fig.width = 8, fig.height = 8, results = 'hide'}
+image(tab)
+```
+
+The confusion matrix shows that the model has found an axis that aligns very well with the crime rate quartile category. Most predictions are correct (68/102), the second most common case is being off by one class (33/102) and then off by two classes (1/102).
+
+68/102 ~= 67% is not _perfect_ but it is a lot better than choosing by random which should give us a correct prediction 25% of the time.
+It looks like the model can be used to make a decent predictor for whether an area has a high or non-high crime rate (the lower left of the matrix vs. the top right), for that predictor, we would have a correct classification rate of 101/102, nearly 100%!
+
+### 6.Extra: let's try with only `rad`
+
+
+```{r fig.align="center", fig.cap = "fig. 6.2 Confusion matrix with a single variable LDA fit", fig.width = 8, fig.height = 8, results = 'hide'}
+lda.radfit <- lda(crime ~ rad, data = train)
+lda.radpred <- predict(lda.radfit, newdata = test)
+radtab <- table(correct = facit, predicted = lda.radpred$class)
+image(radtab)
+```
+
+Using only `rad` gives us a model that seems to have exactly the same predictive power in the `high` vs not `high` case, but loses information in the lower quartiles.
+This fits with our earlier analysis of how LD1 was mostly `rad` and was able to carve out most of the `high` crime rate areas from the rest.
+
+### 7. K-means
+
+
+
+The analysis so far suggests there are at least two clear clusters in the data, so we could just choose k = 2, but let's check with the total within cluster sum of squares what a good choice for k would be.
+
+I will take five samples and average them, and plot the standard deviation of the twcss for each k as error bars, this should give us a more reliable plot than just taking one sample.
+
+
+```{r fig.align="center", fig.cap = "fig. 7.1 k-means twcss plot", fig.width = 10, fig.height = 10, results = 'hide'}
+
+# determine the number of clusters
+#k_max <- 10
+
+# calculate the total within sum of squares, take 5 samples to stabilize the variance 
+twcss1 <- sapply(1:10, function(k){set.seed(100); kmeans(Boston, k)$tot.withinss})
+twcss2 <- sapply(1:10, function(k){set.seed(123); kmeans(Boston, k)$tot.withinss})
+twcss3 <- sapply(1:10, function(k){set.seed(321); kmeans(Boston, k)$tot.withinss})
+twcss4 <- sapply(1:10, function(k){set.seed(130); kmeans(Boston, k)$tot.withinss})
+twcss5 <- sapply(1:10, function(k){set.seed(949); kmeans(Boston, k)$tot.withinss})
+
+df <- as.data.frame(tibble(twcss1,twcss2,twcss3,twcss4,twcss5, k= seq(1,10)))
+df$twcss <- rowMeans(select(df,c(twcss1,twcss2,twcss3,twcss4,twcss5)))
+df <- df %>% rowwise() %>% mutate(twcss_var = var(c(twcss1,twcss2,twcss3,twcss4,twcss5)))
+df %>% ggplot(aes(x=k, y=twcss)) +
+  geom_line() +
+  geom_errorbar(aes(ymin=twcss-sqrt(twcss_var),ymax=twcss+sqrt(twcss_var),color="red"))+
+  theme(legend.position="none") +
+  scale_x_continuous(breaks=df$k) +
+  scale_y_continuous(breaks=seq(1000000,10000000,2000000))
+```
+
+It does look like the plot agrees that k = 2 gives a very good fit. The k-means algorithm seems to always find the same clusters here, because the error bars are attached to each other, indicating that the twcss measure is constant here.
+
+k=3 is also a potential choice, although less clear to me.
+After that, however, the variance increases greatly and the twcss delta starts giving minimal returns, which indicates that there isn't a clear structure to the data which would guide the clustering.
+
+I will go with k=2, as that seems to match what we saw in the data earlier, and the clusters are very stable.
+
+```{r}
+
+Boston_kmeans <- Boston %>% scale %>% as.data.frame
+set.seed(101)
+# k-means clustering
+k2m <- kmeans(Boston_kmeans, centers = 2)
+summary(k2m)
+k2m$centers
+```
+
+It seems that even this k=2 means clustering has found the high-crime rate cluster. Let's confirm that with a visualization.
+
+```{r fig.align="center", fig.cap = "fig. 7.1 k-means pairs", fig.width = 10, fig.height = 10, results = 'hide'}
+
+ggpairs(Boston_kmeans[c("crim", "rad", "tax", "black", "age", "medv", "dis", "zn", "rm", "lstat")], aes(color=factor(k2m$cluster), fill=factor(k2m$cluster)), lower=list(combo=wrap("facethist",binwidth=0.5)))
+
+```
+
+It seems that the model has picked two clusters that have the following relative position to each other:
+
+ - the red cluster has a much lower crime rate
+ - the red cluster has a lower radial highway access index
+ - the red cluster has a lower tax rate
+ - the red cluster has a much higher proportion of black residents
+ - the red cluster has a lower proportion of buildings built prior to 1940
+ - the red cluster has a similar median value distribution, shifted towards a higher evaluation (excepting a blue bump right at the top of the evaluation range)
+ - the blue cluster has a much smaller distance to employment centers
+ - the blue cluster has a much smaller proportion of residential land zoned for large plots
+ - the red cluster has a much smaller proportion of single room apartments and other small housing units
+ - the red cluster has a smaller proportion of working class people and non-educated adults
+ 
+So it seems we have found a blue cluster with a lot of business activity (high tax rate, close to employment centers), with access to arterial highways, and high density building (lower number of rooms, zoned for smaller plots) and a red cluster of areas with less business activity, in relatively quiet regions with longer commutes and more working class or non-educated people, and a much higher proportion of black residents.
+
+So it seems like the red regions are new developments, new suburbs farther away from the city, and there may be some price discrimination in the house prices (`medv`) connected with the high proportion of black residents living there. You can see effects of segregationist US housing policy in the data. E.g., the 1949 housing act set up a framework to subsidize public housing for whites with clauses forbidding resale to black people, which means that black people paid more for housing (see e.g. *"Abramovitz & Smith, The Persistence of Residential Segregation by Race, 1940 to 2010: The Role of Federal Housing Policy,Families in Society, Vol. 102, Issue 1"* for more).
+
+
+## 7.2 Let's try with k=3
+
+Why not try with k=3 for good measure? Maybe we can find additional structure in the data.
+
+```{r}
+set.seed(124293)
+k3m <- kmeans(Boston_kmeans, centers = 3)
+summary(k3m)
+k3m$centers
+```
+
+```{r fig.align="center", fig.cap = "fig. 7.1 k-means pairs", fig.width = 10, fig.height = 10, results = 'hide'}
+
+ggpairs(Boston_kmeans[c("crim", "rad", "tax", "black", "age", "medv", "dis", "zn", "rm", "lstat")], aes(color=factor(k3m$cluster), fill=factor(k3m$cluster)), lower=list(combo=wrap("facethist",binwidth=0.5)))
+
+```
+
+Here we see that the blue cluster in this plot is roughly the same as the blue cluster from the k=2 clustering.
+The k=2 red cluster has here been split into red and green.
+
+The differences in the red and green clusters seem to be:
+ - the red cluster has higher values of `zn` more big plots
+ - the red cluster has a smaller proportion of older buildings
+ - the red cluster consists of exclusively black neighbourhoods, while the green cluster has some spread
+ - the green cluster is between the red and blue clusters when it comes to proportion of laborers and uneducated adults
+ 
+Maybe the red cluster matches better with those black neighbourhoods built more recently, which the 1949 Housing Act and the Federal Housing Authority regulations apply to? I don't know for sure, more analysis would be required.
