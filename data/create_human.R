@@ -107,6 +107,7 @@ hd <- hd %>% rename(GNI = "Gross National Income (GNI) per Capita") %>%
   rename(Life.Exp = "Life Expectancy at Birth") %>%
   rename(Edu.Exp = "Expected Years of Education") %>%
   rename(HDI = "Human Development Index (HDI)") %>%
+  rename(HDI.Rank = "HDI Rank") %>%
   rename(GNI_minus_HDI = "GNI per Capita Rank Minus HDI Rank") %>%
   rename(Edu.Mean = "Mean Years of Education")
 
