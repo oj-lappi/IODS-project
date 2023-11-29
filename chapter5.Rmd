@@ -18,6 +18,8 @@ library(readr)
 library(tibble)
 library(GGally)
 library(corrplot)
+library(dplyr)
+library(FactoMineR)
 human0 <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/human2.csv", show_col_types = FALSE)
 ```
 
@@ -129,7 +131,7 @@ This tells us that PC1 captures nearly **all** of the variance (>0.9999) in the 
 Knowing this, we can't expect a very good biplot, but let's plot one anyway.
 
 ```{r fig.align="center", fig.cap = "fig. 2.1, biplot for PCA of the raw data ", fig.width = 14, fig.height = 14, results = 'hide'}
-pca_pr <- round(1*s$importance[2, ], digits = 4)
+pca_pr <- round(1*summary(pca_raw)$importance[2, ], digits = 4)
 labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
 biplot(pca_raw, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("Negative GNI,", labels[1]), ylab = paste("Maternal mortality,",labels[2]))
 ```
@@ -169,7 +171,7 @@ All principal components do seem to capture at least one percent of the variance
 
 ```{r fig.align="center", fig.cap = "fig. 3.1, biplot for PCA of the scaled data ", fig.width = 16, fig.height = 16, results = 'hide'}
 
-pca_pr <- round(1*s$importance[2, ], digits = 4)
+pca_pr <- round(1*summary(pca_scaled)$importance[2, ], digits = 4)
 labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
 
 biplot(pca_scaled, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("neg. Human development,", labels[1]), ylab = paste("Gender equality,",labels[2]))
@@ -197,6 +199,9 @@ The value of this component is smaller with better outcomes in these domains, wh
 
 PC2 I've called gender equality, because it measures female participation in political decision-making (0.65 * Parli.F) and female participation in the labour market (0.72 * Labo.FM).
 
+This is perhaps not the whole story, because this component has a positive contribution from maternal mortality rates and adolescent birth.
+Maybe this component only measures whether society has moved away from traditional gender roles. In that case, this can be seen as a cultural liberal/conservative axis.
+
 #### PC3 is negative female political empowerment, or negative attitudes towards female leadership
 
 PC3 is positively correlated with female participation in political decision-making (0.73 * Parli.F), but negatively correlated with the ratio of female participation in labor markets and secondary education (-0.584 * Labo.FM, -0.24 * Edu2.FM).
@@ -207,23 +212,27 @@ If a country has a high level of female MPs relative to the female education and
 So this principal component measures how women are viewed as in society.
 Are they seen as leaders (and elected into parliament)? then PC3 is low. Are they seen as useful in the workforce but not as leaders? then PC3 is high.
 
-#### PC4 might be some kind of poverty indicator
+#### PC4 is difficult to interpret
 
 The principal components are getting harder and harder to reason about as we go further down the list.
 
 Roughly, `PC4 = 0.62 Edu2.FM - 0.72 GNI - 0.25 Mat.Mor`.
 
-These variables don't seem to make a clear story. Maybe something about birth rates and population growth? Or poverty?
+These variables don't seem to make a clear story. 
+Edu2.FM should be very close to 1 for all developed nations, as high school dropouts are rare, and with negative GNI per cap. maybe this axis is about the economic development of the country?
+The maternal mortality rate is difficult to square with this.
+
+This component **might** measure the relative focus on wealth as compared to other societal welfare in the country. With heavy emphasis on might.
+
+
 
 ```{r}
 
 human_scaled_pca <- data.frame(pca_scaled$x)
 
-#human_scaled_pca[order(human_scaled_pca$PC4)]
 index <- order(human_scaled_pca$PC4)
-human_scaled_pca[index]
-
-
+human_scaled_pca %>% arrange(desc(PC4))
+human_scaled_pca %>% arrange(PC4)
 
 ```
 
@@ -231,10 +240,65 @@ human_scaled_pca[index]
 
  - `Give your personal interpretations of the first two principal component dimensions based on the biplot drawn after PCA on the standardized human data.` (0-2 points)
 
+## The principal components
+
+I already touched on this in the previous section, but as the first principal components align with `Mat.Mor`, `Ado.Birth`, `Life.Exp`, `GNI`, `Edu.Exp`, and `Edu2.FM`, it seems to capture the general wellbeing of society. Or rather, the lack thereof, since it's pointing in the other direction.
+
+The second axis measures gender equality, as it aligns well with `Parli.F` and `Labo.FM`.
+
+## Social equality trend line
+
+It is good to point out at this point that there is a clear trend line in the upper left corner of the biplot, moving from the right bottom to the top left.
+It seems like most of the countries are in this trend line.
+There is then a large spread of the rest of the countries, which is why this trend is not aligned with the principal components.
+Let's call this trend line the social equality trend line, as all the countries at the top of this trend line have social welfare programs, such as universal healthcare, strong unions, and low GINI indices.
+(A bit hand-wavy, but this is a course assignment, not a research paper).
 
 
 
-## EXTRA: redoing the PCA with the log-transformed data 
+## Correlations
+
+There are some additional interesting correlations in the original variables with the PCs.
+`Mat.Mor` and `Edu.Exp` both point slightly in the positive PC2 direction.
+This doesn't make a lot of intuitive sense if we consider PC2 to capture gender equality or liberal values.
+However, `Mat.Mor` is pointing in the opposite direction from the social equality trend line, which may suggest that the principal components aren't aligned in any particularily meaningful direction.
+PCA has maximiced the dispersion along PC1 and PC2, but it does not necessarily mean that the axes are meaningful in themselves, the axes may be slightly misaligned compared to the labels I've given them.
+
+This idea is supported by the fact that PC1 is bimodal, so the second, smaller mode might then be pulling the PCA slightly off the trend line.
+The other mode consists mostly of African countries and other developing nations.
+The fact that the other variables are distributed differently here might be due to artifacts of colonialism or some other big systemic differences between developed and developing nations.
+
+```{r fig.align="center", fig.cap = "fig. 3.2, PC1 distribution, clearly bimodal ", fig.width = 16, fig.height = 16, results = 'hide'}
+ggplot(data.frame(pca_scaled$x), aes(x=PC1)) + geom_density()
+```
+
+`Parli.F` and `Labo.FM` are pointing in slightly different directions from each other, with `Parli.FM` slightly aligned with GNI, and `Labo.FM` completely orthogonal to it.
+This suggests that female labor participation has no effect on GNI (it doesn't matter for the economy what the sex of a worker is), but female leadership has a positive correlation with GNI (of course, we don't have a causal link here, only a correlation).
+
+## EXTRA: redoing the PCA with the log-transformed data
+
+Just for fun, let's use the log transformed data to see if some of those correlations change
+
+```{r fig.align="center", fig.cap = "fig. 4.1, biplot for PCA of the standardized and log transformed data ", fig.width = 16, fig.height = 16, results = 'hide'}
+pca_log_scaled <- human.log %>% scale %>% as.data.frame %>% prcomp
+summary(pca_log_scaled)
+biplot(pca_log_scaled, cex = c(0.8, 1), col = c("grey40", "#dd4028"))
+```
+Sure enough, if we look at the summary, we see that the first PC now captures 57% of the variance compared to 53.6% before, a better result!
+And the first four PCs now capture 90% of the variance.
+
+
+```{r}
+pca_log_scaled
+```
+
+```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+ggpairs(as.data.frame(pca_log_scaled$x), progress = FALSE)
+ggpairs(as.data.frame(pca_scaled$x), progress = FALSE)
+```
+
+Looking closer at the coefficients, PC1, PC2, and PC3 have roughly the same interpretation as before.
+PC4 has changed now, but it is still as difficult to interpret as before.
 
 ## 5. MCA on tea data
 
@@ -249,3 +313,41 @@ human_scaled_pca[index]
  - `Interpret the results of the MCA and draw at least the variable biplot of the analysis. You can also explore other plotting options for MCA.`
  - `Comment on the output of the plots.` (0-4 points)
  
+```{r}
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+dim(tea)
+#View(tea)
+```
+
+The dataset seems to consist of 300 rows of 36 answers to questionnaire, each row represents one questionnaire.
+
+
+Statistics of the dataset follow.
+
+```{r}
+summary(tea)
+```
+Factominer documentation (https://rdrr.io/cran/FactoMineR/man/tea.html) says the first 18 vars are about how they drink tea, 19 is age, and the rest are personal questions and "product's perception" which I'm choosing to interpret as how they think about tea.
+
+### 5.1 MCA
+
+Let's look at a summary of the MCA of the dataset based on these specs above.
+
+```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+res.mca=MCA(tea,quanti.sup=19,quali.sup=20:36 ,graph=F)
+summary(mca)
+
+```
+
+
+### 5.2
+
+Let's start with a variable plot
+
+```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+plot(res.mca,invisible=c("ind","quali.sup","quanti.sup"),cex=0.8)
+```
+
+```{r}
+plot(res.mca,invisible=c("ind","quanti.sup"),habillage = "quali",cex=0.8)
+```
