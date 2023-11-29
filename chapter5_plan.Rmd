@@ -1,0 +1,54 @@
+
+## 1. Country names as rownames + summaries
+
+ - `Move the country names to rownames (see Exercise 5.5).`
+ - `Show a graphical overview of the data and show summaries of the variables in the data.`
+ - `Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them.` (0-3 points)
+ 
+ - copy: rename
+ - summarize and ggpairs (check the guy from ch4's thing)
+ - interpret
+ 
+ 
+## 2. PCA with raw data
+
+ - `Perform principal component analysis (PCA) on the raw (non-standardized) human data.`
+ - `Show the variability captured by the principal components.`
+ - `Draw a biplot displaying the observations by the first two principal components (PC1 coordinate in x-axis, PC2 coordinate in y-axis), along with arrows representing the original variables.` (0-2 points)
+ 
+ - "show the variability captured", plot a line plot maybe? cumulative + point
+ - biplot, probably copy
+ 
+## 3. PCA with standardized variables
+
+ - `Standardize the variables in the human data and repeat the above analysis.`
+ - `Interpret the results of both analysis (with and without standardizing).`
+ - `Are the results different? Why or why not? Include captions (brief descriptions) in your plots where you describe the results by using not just your variable names, but the actual phenomena they relate to.` (0-4 points)
+ 
+ - scale
+ - state something about distance, and how variance maximization will pick out absolute distances
+ - captions in plots relating to meaning behind vars
+ 
+## 4. Interpret biplot
+
+ - `Give your personal interpretations of the first two principal component dimensions based on the biplot drawn after PCA on the standardized human data.` (0-2 points)
+ 
+ - interpret biplot in words
+ 
+## 5. MCA on tea data
+
+>The tea data comes from the FactoMineR package and it is measured with a questionnaire on tea: 300 individuals were asked how they drink tea (18 questions) and what are their product's perception (12 questions). In addition, some personal details were asked (4 questions).
+>
+>Load the tea dataset and convert its character variables to factors:
+>
+>tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+
+ - `Explore the data briefly: look at the structure and the dimensions of the data. Use View(tea) to browse its contents, and visualize the data.`
+ - `Use Multiple Correspondence Analysis (MCA) on the tea data (or on just certain columns of the data, it is up to you!).`
+ - `Interpret the results of the MCA and draw at least the variable biplot of the analysis. You can also explore other plotting options for MCA.`
+ - `Comment on the output of the plots.` (0-4 points)
+ 
+ - View
+ - visualize
+ - MCA?
+ - look at this after PCA

@@ -32,10 +32,11 @@ gii <- gii %>% rename(GII = "Gender Inequality Index (GII)") %>%
   mutate(Edu2.FM = Edu2.F /Edu2.M) %>%
   mutate(Labo.FM = Labo.F /Labo.M)
 
-
 # ---- join
 
 human <- inner_join(hd, gii, by = "Country")
+
+# Extra wrangling for assignment 5 below
 
 ## Brief explanation
 #-------------------

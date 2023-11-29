@@ -1,0 +1,63 @@
+# Dimension reduction in general: notes
+
+## Computerphile, Data Analysis series, 4: https://www.youtube.com/watch?v=ms6EV1pG3tc
+
+### Data transformation
+
+
+
+## Computerphile, Data Analysis series, 5: https://www.youtube.com/watch?v=8k56bvhXw4s
+
+### Dimension reduction
+
+ - correlation analysis, remove highly correlated features/dimensions
+ - forward analysis, add features, see where the performance of your model plateaus, add randomly (or according to some rule)
+ - backward analysis, remove features, see how much the model performance changes, remove randomly (or according to some rule)
+
+# PCA: notes on theory
+
+## Computerphile, Data Analysis series, 6: https://www.youtube.com/watch?v=TJdH6rPA-TI
+
+### Brief description
+
+ - based on singular value decomposition
+ - finds axes that minimize the distance to the axis and spread along the axis
+ - iterative, axes are generated until there are as many as the number of dimensions at the beginning
+ - all the axes are orthogonal to each other, a PCA is therefore a rotation of the data
+ - because it is a rotation, we want to scale all the variables to mean 0 and var 1, so that the minimization is useful
+
+### As dimension reduction
+
+ - because of the iterative nature of the method, the axes are ordered according to which of them spreads the data out the most
+ - with each axis we also get a metric of the variance in the axis, which is a part of the total variance
+ - each additional axis has less variance
+ - we can keep track of the cumulative variance, moving from axis to axis
+ - a typical cutoff is when the cumulative variance is 99% of the total variance
+ - if we throw away the rest of the axes after this point, we will have reduced the dimensions with a small loss of information
+ 
+## MABS for IODS
+
+### PCA overview
+
+ - basic goal is describing variation in a set of correlated variables in terms of new uncorrelated variables, each being a linear combo of the original variables
+ - these new variables are the "principal components"
+ - `distance` is an important concept in multivariate analysis
+ 
+### Intro
+
+ - too many variables -> curse of dimensionality (scaling issues)
+ - PCA first described by Pearson in 1901, then Hotelling in 1933
+ - The first principal component provides an axis that maximally separates the data points, so it is very good for ordering data
+ - The second order PCs are often interesting as well, if the quantities of interest are not the ones that vary the most
+   - e.g. taxonomist, PC1 ~ size, PC2,3 ~ shape, shape being more interesting
+   - e.g. psychologist, PC1 ~ symptom severity, PC2,3 ~ symptom patterns, differences in symptom classes
+   
+   
+
+### Selecting subsets of original variables based on PCA
+
+>In a series of papers, Jolliffe (1970, 1972, 1973) discusses a number of approaches to selecting subsets of variables
+
+Idea:
+ 1. determine the "dimensionality" m of the data, using some criterion, e.g. variance (also references to some eigenvalue measure in MABS4IODS)
+ 2. select the variables with the highest coefficient in the first m PCAs

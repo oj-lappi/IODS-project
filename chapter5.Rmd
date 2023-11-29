@@ -1,0 +1,251 @@
+# Assignment 5: Dimensionality reduction
+
+## Brief from moodle
+
+
+>Actually, a fairly large selection of statistical methods can be listed under the title "dimensionality reduction techniques". Most often (nearly always, that is!) the real-world phenomena are multidimensional: they may consist of not just two or three but 5 or 10 or 20 or 50 (or more) dimensions. Of course, we are living only in a three-dimensional (3D) world, so those multiple dimensions may really challenge our imagination. It would be easier to reduce the number of dimensions in one way or another.
+>
+>We shall now learn the basics of two data science based ways of reducing the dimensions. The principal method here is principal component analysis (PCA), which reduces any number of measured (continuous) and correlated variables into a few uncorrelated components that collect together as much variance as possible from the original variables. The most important components can be then used for various purposes, e.g., drawing scatterplots and other fancy graphs that would be quite impossible to achieve with the original variables and too many dimensions.
+>
+>Multiple correspondence analysis (MCA) and other variations of CA bring us similar possibilities in the world of discrete variables, even nominal scale (classified) variables, by finding a suitable transformation into continuous scales and then reducing the dimensions quite analogously with the PCA. The typical graphs show the original classes of the discrete variables on the same "map", making it possible to reveal connections (correspondences) between different things that would be quite impossible to see from the corresponding cross tables (too many numbers!).
+>
+>Briefly stated, these methods help to visualize and understand multidimensional phenomena by reducing their dimensionality that may first feel impossible to handle at all.
+
+### 0. Setup, read the data
+
+```{r}
+library(readr)
+library(tibble)
+library(GGally)
+library(corrplot)
+human0 <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/human2.csv", show_col_types = FALSE)
+```
+
+## 1. Country names as rownames + summaries
+
+ - `Move the country names to rownames (see Exercise 5.5).`
+ - `Show a graphical overview of the data and show summaries of the variables in the data.`
+ - `Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them.` (0-3 points)
+ 
+### Rownames
+
+```{r}
+human <- column_to_rownames(human0, "Country")
+```
+
+### Summary, statistics
+
+Let's look at the data, starting with some descriptive statistics:
+
+```{r}
+summary(human)
+```
+
+Based on the difference between mean and median, and the ranges of the variables, `Edu.Exp` and `Parli.FM` seem the most normally distributed.
+`Edu2.FM`, `Labo.FM` and `Life.Exp` are more skewed or have long tails (bdifference between mean and median, and the ranges of the variables).
+`GNI` and `Mat.Mor` are closer to log-normal (or a related distribution), and maybe `Ado.Birth` as well.
+
+### Summary, graphical
+
+```{r fig.align="center", fig.cap = "fig. 1.1, correlation matrix of variables", fig.width = 8, fig.height = 8, results = 'hide'}
+corrplot(cor(human), method="circle",type = "upper", tl.pos = "d")
+```
+
+There are definitely strong correlations in the data. We can identify four different sets of variables from this matrix.
+
+First, there is one set of _very_ strongly correlated variables: `Mat.Mor`, `Ado.Birth`, `Life.Exp`, and `Edu.Exp`.
+These will likely be very strongly represented in the first principal component of a PCA.
+
+Second, these four variables also correlate very strongly with `GNI` and `Edu2.FM`, more strongly than that pair of variables correlate between themselves.
+Since they correlate less amongst themselves, there seems to be more degrees of freedom here.
+
+Then there is a third group, `Labo.FM` and `Parli.F`.
+They seem much less correlated compared to the other set of variables, however, they are most strongly correlated with each other. Again, seemingly more degrees of freedom in this group.
+
+```{r fig.align="center", fig.cap = "fig. 1.2, distributions and scatterplots of variables", fig.width = 12, fig.height = 12, results = 'hide'}
+ggpairs(human, progress = FALSE)
+```
+
+The correlations become much more clear when looking at the scatterplots.
+Some are clearly linear, like `Edu.Exp` and `Life.Exp`. It's even clearer that `GNI` might need to be log-transformed, based on the  distribution and the scatter plot shapes.
+Possibly `Mat.Mor` and `Ado.Birth` too.
+
+The other distributions look like skewed normal-like distributions, all of them have one big main mode, although there are some interesting concentrations in certain parts of the distributions.
+
+E.g., in `Life.Exp`, there is a clear plateau from 60 to roughly 65 or so.
+This may be related to quality of life before and after retirement.
+
+Another example is this curious smaller mode in the `Edu2.FM` around 0.5, and a subsequent drop after that.
+This suggests that there are two overlaid populations, one where the mode is a little under 1, another where the mode is around 0.5.
+I don't have a hypothesis for what could be causing this difference in behaviors in the two populations of countries, but it's a very interesting feature of the distribution.
+Unfortunately we've already thrown away the two variables that this variable is based on, which may have given us some clues to what this effect is.
+
+### Let's do some transforms, just for fun
+
+```{r fig.align="center", fig.cap = "fig. 1.3, distributions and scatterplots of variables after log transform", fig.width = 12, fig.height = 12, results = 'hide'}
+human.log <- human %>% mutate(GNI = log(GNI)) %>% mutate(Mat.Mor = log(Mat.Mor)) %>% mutate(Ado.Birth = log(Ado.Birth))
+ggpairs(human.log, progress = FALSE)
+```
+
+The scatter plots now seem to form much clearer trend lines, which seems to indicate this was a good idea.
+Let's recheck the correlation matrix, just to check that the scale of the data didn't mix things up too much.
+
+```{r fig.align="center", fig.cap = "fig. 1.4, correlation matrix using log transformed dataset", fig.width = 8, fig.height = 8, results = 'hide'}
+corrplot(cor(human.log), method="circle",type = "upper", tl.pos = "d")
+```
+Well, this does seem to have changed a lot of things. The correlations are now much more even among five variables: `Life.Exp`, `Edu.Exp`, `GNI`, `Mat.Mor`, and `Ado.Birth`.
+The correlation with `Edu2.FM` is a little weaker, and the `Parli.F` and `Labo.FM` variables are again least correlated with the others.
+
+## 2. PCA with raw data
+
+ - `Perform principal component analysis (PCA) on the raw (non-standardized) human data.`
+ - `Show the variability captured by the principal components.`
+ - `Draw a biplot displaying the observations by the first two principal components (PC1 coordinate in x-axis, PC2 coordinate in y-axis), along with arrows representing the original variables.` (0-2 points)
+ 
+Since the log transform was not part of the assignment, let's forget it for now, and do PCA on the raw dataset and look at the coefficients.
+
+```{r}
+pca_raw <- prcomp(human)
+pca_raw
+```
+
+PC1 is nearly all GNI, PC2 is nearly all Mat.Mor, and PC3 is nearly all Ado.Birth, etc. This is a problem. Let's see why by looking at the summary of the transformed rows, which are in `pca_raw$x`.
+
+```{r}
+summary(pca_raw$x)
+```
+
+As we saw earlier, GNI per capita goes from roughly 500 to 100000, while the other variables were all max in the hundreds.
+Since PCA will maximize the spread along each principal component, we will get some bad decisions, because the distance scales in these variables are not comparable (the dataset needs to be standardized).
+
+If we look at a summary of the pca, this is even more clear:
+
+```{r}
+summary(pca_raw)
+```
+
+This tells us that PC1 captures nearly **all** of the variance (>0.9999) in the dataset, which again is due to the dataset not being standardized.
+
+Knowing this, we can't expect a very good biplot, but let's plot one anyway.
+
+```{r fig.align="center", fig.cap = "fig. 2.1, biplot for PCA of the raw data ", fig.width = 14, fig.height = 14, results = 'hide'}
+pca_pr <- round(1*s$importance[2, ], digits = 4)
+labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_raw, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("Negative GNI,", labels[1]), ylab = paste("Maternal mortality,",labels[2]))
+```
+
+Again, we see that PC1 is pretty much only GNI. This is evident from the fact that the GNI arrow is the only visible one. This can also be inferred from looking at the order of the countries, high GNI countries are to the left, low GNI countries to the right.
+
+I've named the principal components according to the variable that they've picked up from the dataset (negative GNI and Maternal Mortality), since each of the first few components are almost aligned with one dimension.
+
+## 3. PCA with standardized variables
+
+ - `Standardize the variables in the human data and repeat the above analysis.`
+ - `Interpret the results of both analysis (with and without standardizing).`
+ - `Are the results different? Why or why not? Include captions (brief descriptions) in your plots where you describe the results by using not just your variable names, but the actual phenomena they relate to.` (0-4 points)
+ 
+Let's standardize, do a PCA, and look at the principal components.
+
+```{r}
+pca_scaled <- human %>% scale %>% as.data.frame %>% prcomp
+pca_scaled
+```
+ 
+This already looks much better. Let's see the spreads.
+
+```{r}
+summary(pca_scaled$x)
+```
+
+Ok, the range of the dimensions seem much more sensible now, they are all in the same order of magnitude.
+Let's see how much variance each principal component explains.
+
+```{r}
+summary(pca_scaled)
+```
+
+PC1 explains more than half the variance, not bad!
+All principal components do seem to capture at least one percent of the variance however, so we weill be losing information if we decide to cut this off.
+
+```{r fig.align="center", fig.cap = "fig. 3.1, biplot for PCA of the scaled data ", fig.width = 16, fig.height = 16, results = 'hide'}
+
+pca_pr <- round(1*s$importance[2, ], digits = 4)
+labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
+
+biplot(pca_scaled, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("neg. Human development,", labels[1]), ylab = paste("Gender equality,",labels[2]))
+```
+
+Much better, and better yet, all original variables are roughly axis-aligned.
+I've added descriptive labels based on which variables align with which axes, more on these in section 4.
+
+### 3.1 Interpretation
+
+#### Raw data vs scaled data
+
+As already discussed, the raw data was a bad fit for PCA due to the different orders of magnitude in the dispersion among the variables.
+PCA on raw data essentially just picked out one variable at a time in decreasing order of scale.
+
+PCA on the scaled data performs much better.
+
+#### PC1 is neg. Human development
+
+I've decided to name PC1 `neg. Human development`, inspired by the name of the original dataset.
+This principal component measures the welfare of the country in terms of health (Mat.Mor, Ado.Birth, Life.Exp), standard of living (GNI per cap., ppp adjusted), and education (Edu.Exp, Edu2.FM).
+The value of this component is smaller with better outcomes in these domains, which is where the `neg.` comes in. I would rather take the negative of this PC1 and call it `Human development`, but this is what the PCA gave us.
+
+#### PC2 is gender equality
+
+PC2 I've called gender equality, because it measures female participation in political decision-making (0.65 * Parli.F) and female participation in the labour market (0.72 * Labo.FM).
+
+#### PC3 is negative female political empowerment, or negative attitudes towards female leadership
+
+PC3 is positively correlated with female participation in political decision-making (0.73 * Parli.F), but negatively correlated with the ratio of female participation in labor markets and secondary education (-0.584 * Labo.FM, -0.24 * Edu2.FM).
+
+Let's flip this around and consider `NPC3 = -PC3`, it's easier to reason about that way.
+If a country has a high level of female MPs relative to the female education and participation in the labor market, then NPC3 is high.
+
+So this principal component measures how women are viewed as in society.
+Are they seen as leaders (and elected into parliament)? then PC3 is low. Are they seen as useful in the workforce but not as leaders? then PC3 is high.
+
+#### PC4 might be some kind of poverty indicator
+
+The principal components are getting harder and harder to reason about as we go further down the list.
+
+Roughly, `PC4 = 0.62 Edu2.FM - 0.72 GNI - 0.25 Mat.Mor`.
+
+These variables don't seem to make a clear story. Maybe something about birth rates and population growth? Or poverty?
+
+```{r}
+
+human_scaled_pca <- data.frame(pca_scaled$x)
+
+#human_scaled_pca[order(human_scaled_pca$PC4)]
+index <- order(human_scaled_pca$PC4)
+human_scaled_pca[index]
+
+
+
+```
+
+## 4. Interpret biplot
+
+ - `Give your personal interpretations of the first two principal component dimensions based on the biplot drawn after PCA on the standardized human data.` (0-2 points)
+
+
+
+
+## EXTRA: redoing the PCA with the log-transformed data 
+
+## 5. MCA on tea data
+
+>The tea data comes from the FactoMineR package and it is measured with a questionnaire on tea: 300 individuals were asked how they drink tea (18 questions) and what are their product's perception (12 questions). In addition, some personal details were asked (4 questions).
+>
+>Load the tea dataset and convert its character variables to factors:
+>
+>tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+
+ - `Explore the data briefly: look at the structure and the dimensions of the data. Use View(tea) to browse its contents, and visualize the data.`
+ - `Use Multiple Correspondence Analysis (MCA) on the tea data (or on just certain columns of the data, it is up to you!).`
+ - `Interpret the results of the MCA and draw at least the variable biplot of the analysis. You can also explore other plotting options for MCA.`
+ - `Comment on the output of the plots.` (0-4 points)
+ 
