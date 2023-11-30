@@ -1,0 +1,12 @@
+## MABS notes
+
+
+
+## BPRS data
+
+11 vars, week0 through 9, subject, and treatment
+
+So one subject has 9 data points, we want to make a week column with the corresponding data
+
+So, e.g. treatment A, subject 1, week0: 10 becomes treatment A, subject 1, week 0, result 10... plus 8 more rows, one for each week.
+

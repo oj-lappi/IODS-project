@@ -1,0 +1,109 @@
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+url1 <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt"
+url2 <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt"
+
+
+```
+
+
+
+```{r}
+
+header <- read_delim(url2, n_max=1, col_names=F)
+as.vector(header)
+```
+
+
+```{r}
+df1 <- read_delim(url1) %>% mutate(treatment = factor(treatment)) %>% mutate(subject = factor(subject))
+df2 <- read.table(url2) %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
+df1
+df2
+```
+```{r}
+str(df2)
+```
+```{r}
+
+bprs <-  pivot_longer(df1, cols = -c(treatment, subject),
+                       names_to = "weeks", values_to = "bprs") %>%
+                       arrange(weeks) %>% 
+                       mutate(week = as.integer(substring(weeks, 5))) %>%
+                       select(!one_of("weeks"))
+
+```
+
+```{r}
+df2
+```
+
+```{r}
+rats <-  pivot_longer(df2, cols = -c(ID, Group),
+                      names_to = "days", values_to = "bodyweight") %>%
+                      arrange(days) %>% 
+                      mutate(day = as.integer(substring(days, 3))) %>%
+                      select(!one_of("days"))
+rats
+
+```
+
+```{r}
+library(GGally)
+
+bprs %>% filter(treatment == 1) %>% ggplot(aes(y=bprs,x=week, group = subject, color = subject)) +
+         geom_line()
+
+bprs %>% filter(treatment == 2) %>% ggplot(aes(y=bprs,x=week, group = subject, color = subject)) +
+         geom_line()
+```
+## Standardization
+
+An important effect we want to take notice is how the men who have higher BPRS values at the beginning tend to have higher values throughout the study. This phenomenon is generally referred to as tracking.
+
+The tracking phenomenon can be seen more clearly in a plot of the standardized values of each
+observation, i.e., the values obtained by subtracting the relevant occasion mean from the original observation and then dividing by the corresponding visit standard deviation.
+
+obs - mean/stddev
+
+```{r}
+bprs_std <- bprs %>%
+  group_by(week) %>%
+  mutate(stdbprs = scale(bprs)) %>%
+  ungroup()
+par(mfrow=c(2,2))
+bprs_std %>% filter(treatment == 1) %>% ggplot(aes(y=stdbprs,x=week, group = subject, color = subject)) +
+         geom_line()
+
+bprs_std %>% filter(treatment == 2) %>% ggplot(aes(y=stdbprs,x=week, group = subject, color = subject)) +
+         geom_line()
+
+bprs_std %>% filter(treatment == 1) %>% ggplot(aes(y=stdbprs2,x=week, group = subject, color = subject)) +
+         geom_line()
+
+bprs_std %>% filter(treatment == 2) %>% ggplot(aes(y=stdbprs2,x=week, group = subject, color = subject)) +
+         geom_line()
+```
+## Grouping
+
+```{r}
+bprs_sum <- bprs_std %>%
+  group_by(treatment, week) %>%
+  summarise( mean = mean(stdbprs), se = sd(stdbprs)/sqrt(n())) %>%
+  ungroup()
+bprs_sum
+```
+
+
+## BPRS
+
+>In the first part we will dwelve in to the BPRS data, in which 40 male subjects were randomly assigned to one of two treatment groups and each subject was rated on the brief psychiatric rating scale (BPRS) measured before treatment began (week 0) and then at weekly intervals for eight weeks. The BPRS assesses the level of 18 symptom constructs such as hostility, suspiciousness, hallucinations and grandiosity; each of these is rated from one (not present) to seven (extremely severe). The scale is used to evaluate patients suspected of having schizophrenia.
+
+
+## rats
+
+
+>To investigate the use of linear mixed effects models in practice, we shall use data from a nutrition study conducted in three groups of rats. The groups were put on different diets, and each animal’s body weight (grams) was recorded repeatedly (approximately) weekly, except in week seven when two recordings were taken) over a 9-week period. The question of most interest is whether the growth profiles of the three groups differ.
+
