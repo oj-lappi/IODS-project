@@ -2,7 +2,6 @@
 
 ## Brief from moodle
 
-
 >Actually, a fairly large selection of statistical methods can be listed under the title "dimensionality reduction techniques". Most often (nearly always, that is!) the real-world phenomena are multidimensional: they may consist of not just two or three but 5 or 10 or 20 or 50 (or more) dimensions. Of course, we are living only in a three-dimensional (3D) world, so those multiple dimensions may really challenge our imagination. It would be easier to reduce the number of dimensions in one way or another.
 >
 >We shall now learn the basics of two data science based ways of reducing the dimensions. The principal method here is principal component analysis (PCA), which reduces any number of measured (continuous) and correlated variables into a few uncorrelated components that collect together as much variance as possible from the original variables. The most important components can be then used for various purposes, e.g., drawing scatterplots and other fancy graphs that would be quite impossible to achieve with the original variables and too many dimensions.
@@ -284,17 +283,11 @@ pca_log_scaled <- human.log %>% scale %>% as.data.frame %>% prcomp
 summary(pca_log_scaled)
 biplot(pca_log_scaled, cex = c(0.8, 1), col = c("grey40", "#dd4028"))
 ```
-Sure enough, if we look at the summary, we see that the first PC now captures 57% of the variance compared to 53.6% before, a better result!
-And the first four PCs now capture 90% of the variance.
+Sure enough, if we look at the summary, we see that the first PC now captures 57% of the variance compared to 53.6% before, a better result. The first four PCs now capture 90% of the variance, after that we get diminishing returns.
 
 
 ```{r}
 pca_log_scaled
-```
-
-```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
-ggpairs(as.data.frame(pca_log_scaled$x), progress = FALSE)
-ggpairs(as.data.frame(pca_scaled$x), progress = FALSE)
 ```
 
 Looking closer at the coefficients, PC1, PC2, and PC3 have roughly the same interpretation as before.
@@ -321,8 +314,7 @@ dim(tea)
 
 The dataset seems to consist of 300 rows of 36 answers to questionnaire, each row represents one questionnaire.
 
-
-Statistics of the dataset follow.
+Summary statistics follow.
 
 ```{r}
 summary(tea)
@@ -331,26 +323,78 @@ Factominer documentation (https://rdrr.io/cran/FactoMineR/man/tea.html) says the
 
 ### 5.1 MCA
 
+There are a lot of variables here, so let's choose a sensible subset of them to look at.
+Let's choose the following variables, which I'm interpreting free-hand here, since I can't find much metadata:
+
+ - `Tea`: what kind of tea out of three types the respondent prefers (green, black, Earl Grey)
+ - `price`: the price level of the tea that the respondent prefers
+ - `How`: whether the respondent takes tea as is, with lemon, with milk, or in some other way
+ - `sex`: the sex of the respondent
+ - `SPC`: some kind of general social group for the respondent (student, employee (white collar?), middle (management?), senior)
+ - `age_Q`: the age group of the respondent
+ - `frequency`: how often the respondent drinks tea
+ 
+of these, `Tea`, `price`, and `How` are "active" variables, and the rest are "supplementary" variables.
+
+As a sidenote, this dataset is very badly documented.
+
+```{r}
+tea_filtered <- tea %>% dplyr::select(one_of("Tea", "price", "How", "sex", "SPC", "age_Q", "frequency"))
+summary(tea_filtered)
+```
+
 Let's look at a summary of the MCA of the dataset based on these specs above.
 
-```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
-res.mca=MCA(tea,quanti.sup=19,quali.sup=20:36 ,graph=F)
+```{r}
+mca=MCA(tea_filtered,quali.sup=4:7 ,graph=F)
 summary(mca)
-
 ```
 
 
 ### 5.2
 
-Let's start with a variable plot
+Let's start with a plot of the individuals (`ind`):
 
 ```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
-plot(res.mca,invisible=c("ind","quali.sup","quanti.sup"),cex=0.8)
+par(mfrow=c(2,2))
+plot(mca, graph.type="ggplot", invisible=c("var","quali.sup","quanti.sup"),cex=0.8)
 ```
 
-Then a plot of the variables and the qualitative categories.
+I see no real clusters, but there seem to be some duplicates.
+Dimension 1 covers 12.6% of the variance, and dimension 2 covers 12% of the variance, roughly the same.
+The scatter plot forms a triangle in this space, with a wide base forming around the Dim 1 = 0 and extending to the right.
+
+Now let's plot the `var` variables --- `Tea`, `price`, and `How` --- which the plot function for FactoMineR's MCA colors black, red, and green, respectively. 
 
 ```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
-plot(res.mca,invisible=c("ind","quanti.sup"),habillage = "quali",cex=0.8)
+plot(mca, graph.type="ggplot", invisible=c("ind","quali.sup","quanti.sup"), cex=0.8, habillage="quali")
+```
+Dimension 1 seems to cover:
+ - most strongly (Tea: 0.61), whether the respondent prefers black tea or not (black +1.36, green -0.49, Earl Grey -0.44)
+ - then (How: 0.334), whether the respondenr likes to add things to their tea (alone -0.28, lemon, milk, other all positive +)
+ - and finally, no clear correlation with price, since both upscale and cheap are positive in dimension 1
+ 
+Dimension 2 seems to cover:
+ - whether the respondent is unlikely to prefer green tea (-1.636)
+ - whether the respondent likes cheap tea (cheap +1.313, upscale -0.874)
+ 
+The `p_unknown` category in the price has the highest coefficient here, which makes this one tough to interpret.
+
+Finally, let's look at the demographics of the individuals and see how they distribute over this space:
+
+```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+plot(mca, graph.type="ggplot", invisible=c("ind","var","quanti.sup"), cex=0.8, habillage="quali")
 ```
 
+It seems that age is the best explaining variable for the differences in respondents tea drinking habits (dim 1: 0.130, dim 2: 0.022), followed by SPC, which does encode some of the same information as age, so perhaps it is redundant.
+If we interpret the dimensions from before we could roughly say that:
+ - older people are more likely to prefer generic black tea to green tea or Earl Grey
+ - younger people are more likely to prefer Earl Grey
+ - green tea is most likely to be preferred by people in the 25-34 age range who are "employees" (office workers?)
+ - older people prefer to add milk, lemon, or something else to their tea
+
+There is also a slight difference in the distribution of answers between sexes:
+ - men more likely to prefer black tea
+ - women more likely to prefer Ear Grey or green tea
+ 
+The frequency of tea drinking is all over the place and forms no clear trendline in the biplot.
