@@ -348,6 +348,9 @@ Let's start with a variable plot
 plot(res.mca,invisible=c("ind","quali.sup","quanti.sup"),cex=0.8)
 ```
 
-```{r}
+Then a plot of the variables and the qualitative categories.
+
+```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
 plot(res.mca,invisible=c("ind","quanti.sup"),habillage = "quali",cex=0.8)
 ```
+
