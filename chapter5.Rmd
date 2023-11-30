@@ -223,18 +223,6 @@ The maternal mortality rate is difficult to square with this.
 
 This component **might** measure the relative focus on wealth as compared to other societal welfare in the country. With heavy emphasis on might.
 
-
-
-```{r}
-
-human_scaled_pca <- data.frame(pca_scaled$x)
-
-index <- order(human_scaled_pca$PC4)
-human_scaled_pca %>% arrange(desc(PC4))
-human_scaled_pca %>% arrange(PC4)
-
-```
-
 ## 4. Interpret biplot
 
  - `Give your personal interpretations of the first two principal component dimensions based on the biplot drawn after PCA on the standardized human data.` (0-2 points)
@@ -351,7 +339,7 @@ summary(mca)
 ```
 
 
-### 5.2
+### 5.2 Plotting and interpretation
 
 Let's start with a plot of the individuals (`ind`):
 
