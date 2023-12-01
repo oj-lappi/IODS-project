@@ -1,3 +1,176 @@
 # Assignment 6: Analyzing longitudinal data
 
+```{r}
+library(readr)
+library(dplyr)
+library(GGally)
+library(gridExtra)
+```
+
+## RATS data
+
+>To begin to see how linear mixed effects models are applied in practice, we
+shall use some data from a nutrition study conducted in three groups of rats
+(Crowder and Hand, 1990). The three groups were put on different diets, and
+each animal’s body weight (grams) was recorded repeatedly (approximately
+weekly, except in week seven when two recordings were taken) over a 9-week
+period. The question of most interest is whether the growth profiles of the
+three groups differ. The data are shown in Table 9.1.
+
+The RATS data is from a nutrition stufy by Crowdeer & Hand (1990) on three groups of rats, each group given a different diet.
+The research question is whether the growth profiles of the rats differ.
+
+
+## 1. Chapter 8 approach with rats dataset
+
+>Implement the analyses of Chapter 8 of MABS, using the R codes of Exercise Set 6: Meet and Repeat: PART I but using the RATS data (from Chapter 9 and Meet and Repeat: PART II).
+(0-7 points: 0-4 points for graphs or analysis results + 0-3 points for their interpretations)
+
+In this problem, we're using the "summary measure approach from chapter 8".
+
+```{r}
+rats <- read_csv("data/rats.csv") %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
+```
+
+### 1.1 Dataset {.tabset .tabset-fade }
+
+Let's inspect:
+
+ - the distribution of initial bodyweights
+ - the distribution of final bodyweights
+ - the distribution of bodyweights in the three groups
+ - the mean growth profile
+ - the growth profile of the three groups
+ 
+Below, there are three tabs in the notebook, you can switch between them to look at different aspects of the data.
+
+#### Distribution shift
+ 
+We start by looking at the distribution of initial and final bodyweights to see if we can detect a trend. 
+
+```{r fig.align="center", fig.cap = "fig. 1.1, Baseline and final rat weight distributions", fig.width = 16, fig.height = 16, results = 'hide'}
+initial_time <- min(rats$Time)
+final_time <- max(rats$Time)
+
+initial_rats <- rats %>% filter(Time == initial_time)
+final_rats <- rats %>% filter(Time == final_time)
+min_range <- min(rats$Bodyweight)
+max_range <- max(rats$Bodyweight)
+
+ggplot() +    geom_density(data= initial_rats, bw = "SJ", aes(x=Bodyweight, fill = "Baseline bodyweight", alpha=0.4)) +
+              geom_density(data= final_rats, bw = "SJ", aes(x=Bodyweight,  fill = "Final bodyweight", alpha=0.4)) +
+              scale_fill_manual(values=c("Baseline bodyweight" = "#cccccc","Final bodyweight" = "#ff9955")) +
+              labs(fill= "Weight distribution") +
+              scale_x_continuous(limits = c(min_range, max_range)) +
+              scale_alpha(guide = "none")
+
+```
+There is a clear shift towards a heavier distribution of bodyweights over the course of the experiment --- the rats are growing.
+It looks like there's three modes in both distribution, but in the final bodyweight distribution, the middle mode has gotten close to the heaviest mode.
+
+#### Groups
+
+Let's look at the initial bodyweights of the three groups.
+
+```{r fig.align="center", fig.cap = "fig. 1.2, Baseline weight distributions per group", fig.width = 16, fig.height = 16, results = 'hide'}
+initial_rats %>%
+  ggplot(aes(x=Bodyweight, group=Group, fill=Group, alpha = 0.5)) +
+  geom_density(bw = "SJ")+
+  scale_alpha(guide = "none")
+```
+
+Hmm, the groups seem to have different bodyweight distributions, the modes do not overlap, and I have a feeling that the difference between groups is much greater than the difference between the growth from initial to final measurements.
+This is even clearer in the next tab to the right.
+
+#### Distribution shift per group
+
+```{r fig.align="center", fig.cap = "fig. 1.3, Baseline and final weight distributions per group", fig.width = 16, fig.height = 16, results = 'hide'}
+
+ggplot() +    geom_density(data= initial_rats, bw = "SJ", aes(x=Bodyweight, group=Group, fill = paste("Group",Group,"baseline"), alpha=0.4)) +
+              geom_density(data= final_rats, bw = "SJ", aes(x=Bodyweight, group=Group, fill = paste("Group",Group,"final"), alpha=0.4)) +
+              scale_fill_manual(values=c("Group 1 baseline" = "#ff9999",
+                                         "Group 2 baseline" = "#99ff99",
+                                         "Group 3 baseline" = "#9999ff",
+                                         "Group 1 final" = "#dd2222",
+                                         "Group 2 final" = "#22dd22",
+                                         "Group 3 final" = "#2222dd")) +
+              labs(fill= "Weight distribution") +
+              scale_x_continuous(limits = c(min_range, max_range)) +
+              scale_alpha(guide = "none")
+```
+
+The shift of the distributions are visible, but they are still smaller than the initial differences between the weight distributions.
+In my mind this would make the groups a little difficult to compare, since we can't be sure that the effect of the baseline bodyweight doesn't behave differently for each group.
+The green high peak is a single outlier, as we will see when looking at the line plots.
+
+#### Growth trend
+
+```{r fig.align="center", fig.cap = "fig. 1.4, Mean growth and plot of each rats bodyweight increase", fig.width = 16, fig.height = 16, results = 'hide'}
+rat_trend <-  rats %>% group_by(Time) %>%
+  summarise(mean = mean(Bodyweight), se = sd(Bodyweight)/sqrt(n())) %>%
+  ungroup()
+
+rat_trend %>% ggplot(aes(x=Time, y = mean)) +
+          geom_line(aes(color="mean")) +
+          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean"), width=0.3) +
+          labs(color= "Group") +
+          ylab("Bodyweight") +
+          geom_line(data=rats, aes(x=Time, y=Bodyweight, color = Group, group=ID))
+```
+
+We see an issue with taking the mean bodyweight of all rats: none of the rats are at the mean, they straddle the mean on both sides.
+We also see more clearly in this plot that one of the groups (group 1) has double the number of rats that the others do (8 vs. 4).
+The outlier in the green group is also much more apparent here, we might have to remove it.
+
+### 1.2 Standardize
+
+Let's standardize the dataset and plot that last plot (`Growth Trend`) again.
+
+```{r fig.align="center", fig.cap = "fig. 1.5, Mean time-standardized weights and plot of each rats std weight", fig.width = 16, fig.height = 16, results = 'hide'}
+rats_std <- rats %>%
+  group_by(Time) %>%
+  mutate(std_weight = scale(Bodyweight)) %>%
+  ungroup()
+
+std_rat_trend <-  rats_std %>% group_by(Time) %>%
+  summarise(mean = mean(std_weight), se = sd(std_weight)/sqrt(n())) %>%
+  ungroup()
+
+std_rat_trend %>% ggplot(aes(x=Time, y = mean)) +
+          geom_line(aes(color="mean")) +
+          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean"), width=0.3) +
+          labs(color= "Group") +
+          ylab("standardized weight") +
+          geom_line(data=rats_std, aes(x=Time, y=std_weight, color = Group, group=ID))
+
+```
+
+
+### 1.3 mean plots
+
+There are so few samples per group that the figure 1.5 contains more information than plotting the mean and standard error, but let's plot that as well for completeness.
+
+```{r fig.align="center", fig.cap = "fig. 1.6, Mean growth per group", fig.width = 16, fig.height = 16, results = 'hide'}
+
+std_rat_group_trends <-  rats_std %>% group_by(Time, Group) %>%
+  summarise(mean = mean(std_weight), se = sd(std_weight)/sqrt(n())) %>%
+  ungroup()
+
+std_rat_group_trends %>% ggplot(aes(x = Time, y = mean, color = Group)) +
+  geom_line() +
+  geom_point(size=3) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.3) +
+  scale_y_continuous(name = "mean(Bodyweight) +/- se(Bodyweight)")
+```
+
+### 1.4 Outlier in group 2?
+
+### 1.5 Standardize by baseline?
+
+### 1.6 fit and anova?
+
+## 2. BPRS and chapter 9 analysis
+
+>Implement the analyses of Chapter 9 of MABS, using the R codes of Exercise Set 6: Meet and Repeat: PART II, but using the BPRS data (from Chapter 8 and Meet and Repeat: PART I).
+(0-8 points: 0-4 points for graphs or analysis results + 0-4 points for their interpretations)
 

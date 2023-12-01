@@ -222,9 +222,7 @@ image(radtab)
 Using only `rad` gives us a model that seems to have exactly the same predictive power in the `high` vs not `high` case, but loses information in the lower quartiles.
 This fits with our earlier analysis of how LD1 was mostly `rad` and was able to carve out most of the `high` crime rate areas from the rest.
 
-### 7. K-means
-
-
+## 7. K-means
 
 The analysis so far suggests there are at least two clear clusters in the data, so we could just choose k = 2, but let's check with the total within cluster sum of squares what a good choice for k would be.
 
@@ -298,7 +296,7 @@ So it seems we have found a blue cluster with a lot of business activity (high t
 So it seems like the red regions are new developments, new suburbs farther away from the city, and there may be some price discrimination in the house prices (`medv`) connected with the high proportion of black residents living there. You can see effects of segregationist US housing policy in the data. E.g., the 1949 housing act set up a framework to subsidize public housing for whites with clauses forbidding resale to black people, which means that black people paid more for housing (see e.g. *"Abramovitz & Smith, The Persistence of Residential Segregation by Race, 1940 to 2010: The Role of Federal Housing Policy,Families in Society, Vol. 102, Issue 1"* for more).
 
 
-## 7.2 Let's try with k=3
+### 7.Extra Let's try with k=3
 
 Why not try with k=3 for good measure? Maybe we can find additional structure in the data.
 
