@@ -2,35 +2,101 @@ library(readr)
 library(dplyr)
 library(tidyr)
 
-url1 <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt"
-url2 <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt"
+bprs_url <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt"
+rats_url <- "https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt"
 
-# BPRS: brief psychiatric rating scale, used as indicator of schizophrenia
+# Wide BPRS data
+# ==============
 
-bprs <- read_delim(url1) %>%
-        pivot_longer(cols = -c(treatment, subject), names_to = "weeks", values_to = "bprs") %>%
-        arrange(weeks) %>% 
-        mutate(week = as.integer(substring(weeks, 5))) %>%
-        select(!one_of("weeks"))
+bprs_wide <- read_delim(bprs_url) %>% mutate(treatment = factor(treatment)) %>% mutate(subject = factor(subject))
 
-#This includes standardization
-#bprs <- read_delim(url1) %>%
-#        pivot_longer(cols = -c(treatment, subject), names_to = "weeks", values_to = "bprs") %>%
-#        arrange(weeks) %>% 
-#        mutate(week = as.integer(substring(weeks, 5))) %>%
-#        select(!one_of("weeks")) %>%
-#        group_by(week) %>%
-#        mutate(stdbprs = scale(bprs)) %>%
-#        ungroup()
+#A data transformation script is not the place to put summaries etc., so let's execute them and write the output as comments
+# str(bprs_wide)
+# tibble [40 × 11] (S3: tbl_df/tbl/data.frame)
+#  $ treatment: Factor w/ 2 levels "1","2": 1 1 1 1 1 1 1 1 1 1 ...
+#  $ subject  : Factor w/ 20 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+# $ week0    : num [1:40] 42 58 54 55 72 48 71 30 41 57 ...
+# $ week1    : num [1:40] 36 68 55 77 75 43 61 36 43 51 ...
+# $ week2    : num [1:40] 36 61 41 49 72 41 47 38 39 51 ...
+# $ week3    : num [1:40] 43 55 38 54 65 38 30 38 35 55 ...
+# $ week4    : num [1:40] 41 43 43 56 50 36 27 31 28 53 ...
+# $ week5    : num [1:40] 40 34 28 50 39 29 40 26 22 43 ...
+# $ week6    : num [1:40] 38 28 29 47 32 33 30 26 20 43 ...
+# $ week7    : num [1:40] 47 28 25 42 38 27 31 25 23 39 ...
+# $ week8    : num [1:40] 51 28 24 46 32 25 31 24 21 32 ...
 
-#This includes summarizing by treatment
-#bprs_sum <- bprs %>%
-#            group_by(treatment, week) %>%
-#            summarise( mean = mean(stdbprs), se = sd(stdbprs)/sqrt(n())) %>%
-#            ungroup()
+## In the wide data, all the bprs values are in columns weekX, where X is the week number, a more accurate name for these columns would be bprs_for_weekX
+## We have fewer rows and more columns, because every row now represents a subject.
+## Ignoring the metadata (treatment, subject), the bprs data is in 40 rows of 9 columns, 40*9 = 360
 
-df2 <- read.table(url2) %>%
-        pivot_longer(df2, cols = -c(ID, Group), names_to = "days", values_to = "bodyweight") %>%
-        arrange(days) %>% 
-        mutate(day = as.integer(substring(days, 3))) %>%
-        select(!one_of("days"))
+# Long BPRS data
+# ==============
+
+# The value in the week columns of the wide format is BPRS, the brief psychiatric rating scale, used as indicator of schizophrenia
+# So that's the name we give to the pivoted values
+
+bprs <- bprs_wide %>%
+          pivot_longer(cols = -c(treatment, subject), names_to = "weeks", values_to = "bprs") %>%
+          arrange(weeks) %>% mutate(week = as.integer(substring(weeks, 5))) %>%
+          select(!one_of("weeks"))
+
+# str(bprs)
+# tibble [360 × 4] (S3: tbl_df/tbl/data.frame)
+#  $ treatment: Factor w/ 2 levels "1","2": 1 1 1 1 1 1 1 1 1 1 ...
+#  $ subject  : Factor w/ 20 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+#  $ bprs     : num [1:360] 42 58 54 55 72 48 71 30 41 57 ...
+#  $ week     : int [1:360] 0 0 0 0 0 0 0 0 0 0 ...
+
+## In the long data, each bprs value gets its own row, which means we can process the points across any of the three axes (treatment, subject, week)
+## We have more rows and fewer columns because of this
+## The bprs data is now in 360 rows of one bprs column, 360*1 = 360
+
+# Wide rats data
+# ==============
+
+rats_wide <- read.table(rats_url) %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
+
+#str(rats_wide)
+# 'data.frame':	16 obs. of  13 variables:
+#  $ ID   : Factor w/ 16 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+#  $ Group: Factor w/ 3 levels "1","2","3": 1 1 1 1 1 1 1 1 2 2 ...
+#  $ WD1  : int  240 225 245 260 255 260 275 245 410 405 ...
+#  $ WD8  : int  250 230 250 255 260 265 275 255 415 420 ...
+#  $ WD15 : int  255 230 250 255 255 270 260 260 425 430 ...
+#  $ WD22 : int  260 232 255 265 270 275 270 268 428 440 ...
+#  $ WD29 : int  262 240 262 265 270 275 273 270 438 448 ...
+#  $ WD36 : int  258 240 265 268 273 277 274 265 443 460 ...
+#  $ WD43 : int  266 243 267 270 274 278 276 265 442 458 ...
+#  $ WD44 : int  266 244 267 272 273 278 271 267 446 464 ...
+#  $ WD50 : int  265 238 264 274 276 284 282 273 456 475 ...
+#  $ WD57 : int  272 247 268 273 278 279 281 274 468 484 ...
+#  $ WD64 : int  278 245 269 275 280 281 284 278 478 496 ...
+
+## In the wide data, the rats' bodyweight data are in columns WDXX, where XX is the day number, I imagine WD stands for "Weight, Day"
+## We have fewer rows and more columns, because every row represents a subject.
+## Ignoring the metadata (ID, Group), the rats data is in 16 rows of 11 columns, 16*11 = 176
+
+# Long rats data
+# ==============
+
+# The value in the WDXX columns is the bodyweight in grams, so we're pvoting those values to the column "Bodyweight"
+
+rats <- rats_wide %>%
+          pivot_longer(cols = -c(ID, Group), names_to = "days", values_to = "Bodyweight") %>%
+          arrange(days) %>% 
+          mutate(Time = as.integer(substring(days, 3))) %>% 
+          select(!one_of("days"))
+
+#str(rats)
+# tibble [176 × 4] (S3: tbl_df/tbl/data.frame)
+#  $ ID        : Factor w/ 16 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+#  $ Group     : Factor w/ 3 levels "1","2","3": 1 1 1 1 1 1 1 1 2 2 ...
+#  $ Bodyweight: int [1:176] 240 225 245 260 255 260 275 245 410 405 ...
+#  $ Time      : int [1:176] 1 1 1 1 1 1 1 1 1 1 ...
+
+## In the long data, each weighing gets its own row, which means we can process the points across any of the three axes (ID, Group, Time)
+## We have more rows and fewer columns because of this
+## The bprs data is now in 176 rows of one bprs column, 176*1 = 176
+
+write_csv(bprs, "data/bprs.csv")
+write_csv(rats, "data/rats.csv")
