@@ -7,32 +7,20 @@ library(GGally)
 library(gridExtra)
 ```
 
-## RATS data
 
->To begin to see how linear mixed effects models are applied in practice, we
-shall use some data from a nutrition study conducted in three groups of rats
-(Crowder and Hand, 1990). The three groups were put on different diets, and
-each animal’s body weight (grams) was recorded repeatedly (approximately
-weekly, except in week seven when two recordings were taken) over a 9-week
-period. The question of most interest is whether the growth profiles of the
-three groups differ. The data are shown in Table 9.1.
+## 1. Analyzing the `rats` dataset using the summary measure approach
 
-The RATS data is from a nutrition stufy by Crowdeer & Hand (1990) on three groups of rats, each group given a different diet.
-The research question is whether the growth profiles of the rats differ.
+In this problem, we're using the summary measure approach on the `rats` dataset.
 
+The `rats` data is from a nutrition study presented in the textbook _Analysis of Repeated Measures_ (Crowdeer & Hand, 1990) on three groups of rats, each group given a different diet.
+The rats were weighed weekly over a 9-week period to study the effects of the different diets.
 
-## 1. Chapter 8 approach with rats dataset
-
->Implement the analyses of Chapter 8 of MABS, using the R codes of Exercise Set 6: Meet and Repeat: PART I but using the RATS data (from Chapter 9 and Meet and Repeat: PART II).
-(0-7 points: 0-4 points for graphs or analysis results + 0-3 points for their interpretations)
-
-In this problem, we're using the "summary measure approach from chapter 8".
 
 ```{r}
 rats <- read_csv("data/rats.csv") %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
 ```
 
-### 1.1 Dataset {.tabset .tabset-fade }
+### 1.1A Graphical displays, weight {.tabset .tabset-fade }
 
 Let's inspect:
 
@@ -57,12 +45,12 @@ final_rats <- rats %>% filter(Time == final_time)
 min_range <- min(rats$Bodyweight)
 max_range <- max(rats$Bodyweight)
 
-ggplot() +    geom_density(data= initial_rats, bw = "SJ", aes(x=Bodyweight, fill = "Baseline bodyweight", alpha=0.4)) +
-              geom_density(data= final_rats, bw = "SJ", aes(x=Bodyweight,  fill = "Final bodyweight", alpha=0.4)) +
-              scale_fill_manual(values=c("Baseline bodyweight" = "#cccccc","Final bodyweight" = "#ff9955")) +
-              labs(fill= "Weight distribution") +
-              scale_x_continuous(limits = c(min_range, max_range)) +
-              scale_alpha(guide = "none")
+ggplot() + geom_density(data= initial_rats, bw = "SJ", aes(x=Bodyweight, fill = "Baseline bodyweight", alpha=0.4)) +
+           geom_density(data= final_rats, bw = "SJ", aes(x=Bodyweight,  fill = "Final bodyweight", alpha=0.4)) +
+           scale_fill_manual(values=c("Baseline bodyweight" = "#cccccc","Final bodyweight" = "#ff9955")) +
+           labs(fill= "Weight distribution") +
+           scale_x_continuous(limits = c(min_range, max_range)) +
+           scale_alpha(guide = "none")
 
 ```
 There is a clear shift towards a heavier distribution of bodyweights over the course of the experiment --- the rats are growing.
@@ -111,8 +99,8 @@ rat_trend <-  rats %>% group_by(Time) %>%
   ungroup()
 
 rat_trend %>% ggplot(aes(x=Time, y = mean)) +
-          geom_line(aes(color="mean")) +
-          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean"), width=0.3) +
+          geom_line(aes(color="mean +- se")) +
+          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean +- se")) +
           labs(color= "Group") +
           ylab("Bodyweight") +
           geom_line(data=rats, aes(x=Time, y=Bodyweight, color = Group, group=ID))
@@ -122,55 +110,289 @@ We see an issue with taking the mean bodyweight of all rats: none of the rats ar
 We also see more clearly in this plot that one of the groups (group 1) has double the number of rats that the others do (8 vs. 4).
 The outlier in the green group is also much more apparent here, we might have to remove it.
 
-### 1.2 Standardize
+### 1.1B Graphical displays, weight gain {.tabset .tabset-fade }
 
-Let's standardize the dataset and plot that last plot (`Growth Trend`) again.
+The lines are difficult to compare because the groups' baselines are so different.
+If we could get all of the lines to start at the same location, we may be able to compare them better, so let's create a new column for each observation subtracting the baseline bodyweight from the measured bodyweight, which we can call `Weight_gain`.
 
-```{r fig.align="center", fig.cap = "fig. 1.5, Mean time-standardized weights and plot of each rats std weight", fig.width = 16, fig.height = 16, results = 'hide'}
+And then we can look at graphical displays of that data.
+
+```{r}
+rats <- rats %>%
+          mutate(Weight_gain = Bodyweight - filter(initial_rats, ID == ID)$Bodyweight) %>%
+          mutate(Baseline_weight = initial_rats[as.integer(ID),]$Bodyweight)
+
+checksum <- rats$Baseline_weight - rats$Bodyweight + rats$Weight_gain
+all(checksum == 0)
+```
+
+#### Weight gain after 9W
+ 
+The initial distribution of weight gain is constant (all zeros) so we will only plot the overall weight gain distribution after 9 weeks.
+
+```{r fig.align="center", fig.cap = "fig. 2.1, Weight gain distribution after 9 weeks", fig.width = 16, fig.height = 16, results = 'hide'}
+final_rats <- rats %>% filter(Time == final_time)
+ggplot() + geom_density(data=final_rats, bw = "SJ", aes(x=Weight_gain,  fill = "0")) +
+           scale_fill_manual(values=c("0"="#ff9955"), guide = "none") +
+           xlab("Weight gain after 9 weeks")
+```
+There seem to be two modes here, which may indicate a difference between groups.
+
+#### Weight gain per group
+
+Let's look at the final bodyweights of the three groups.
+
+```{r fig.align="center", fig.cap = "fig. 2.2, Weight gain distribution per group after 9 weeks", fig.width = 16, fig.height = 16, results = 'hide'}
+final_rats %>%
+  ggplot(aes(x=Weight_gain, group=Group, fill=Group, alpha = 0.5)) +
+  geom_density(bw = "SJ")+
+  scale_alpha(guide = "none")+
+  xlab("Weight gain after 9 weeks")
+```
+
+Okay, there seem to be some difference between the red (1) and green (3) groups, but these were also the groups with the largest differences in the baseline.
+
+#### Weight gain trend
+
+```{r fig.align="center", fig.cap = "fig. 2.3, Mean growth and plot of each rats bodyweight increase", fig.width = 16, fig.height = 16, results = 'hide'}
+rat_trend <-  rats %>% group_by(Time) %>%
+  summarise(mean = mean(Bodyweight), mean_gain = mean(Weight_gain), se = sd(Bodyweight)/sqrt(n()),se_gain = sd(Weight_gain)/sqrt(n())) %>%
+  ungroup()
+
+rat_trend %>% ggplot(aes(x=Time, y = mean_gain,ymin=mean_gain-se_gain, ymax=mean_gain+se_gain)) +
+          geom_line(aes(color="mean +- se")) +
+          geom_errorbar(aes(color = "mean +- se")) +
+          geom_ribbon(aes(fill="0",alpha=0.1)) +
+          labs(color= "Group") +
+          ylab("Weight gain") +
+          scale_fill_manual(guide="none", values =(c("0"="#cccccc"))) +
+          scale_alpha(guide="none") +
+          geom_line(data=rats, aes(x=Time, y=Weight_gain,ymin =0, ymax=0, color = Group, group=ID))
+```
+
+Looking at the weight gain of each rat, we do start to see some 
+
+### 1.2 Standardize {.tabset .tabset-fade}
+
+Let's standardize the dataset and plot that last plot (`Growth Trend`) again, for both the body weight and the weight gain
+
+```{r fig.align="center", fig.cap = "fig. 3.1, Standardized weight and weight gain per rat, and all-groups mean", fig.width = 17, fig.height = 9, results = 'hide'}
 rats_std <- rats %>%
   group_by(Time) %>%
   mutate(std_weight = scale(Bodyweight)) %>%
+  mutate(std_weight_gain = if_else(Weight_gain != 0, scale(Weight_gain), 0)) %>%
   ungroup()
 
 std_rat_trend <-  rats_std %>% group_by(Time) %>%
-  summarise(mean = mean(std_weight), se = sd(std_weight)/sqrt(n())) %>%
+  summarise(mean = mean(std_weight), mean_gain = mean(std_weight_gain), se = sd(std_weight)/sqrt(n()),se_gain = sd(std_weight_gain)/sqrt(n())) %>%
   ungroup()
 
-std_rat_trend %>% ggplot(aes(x=Time, y = mean)) +
-          geom_line(aes(color="mean")) +
-          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean"), width=0.3) +
+weight_plot <- std_rat_trend %>% ggplot(title = "", aes(x=Time, y = mean,ymin=mean-se, ymax=mean+se)) +
+          geom_line(aes(color="mean +- se", linetype="2")) +
+          geom_errorbar(aes(ymin=mean-se, ymax=mean+se, color = "mean +- se"), width=1.5, size = 0.3) +
+          geom_ribbon(aes(fill="0",alpha=0.1)) +
+          ylab("std. weight") +
+          geom_line(data=rats_std, aes(x=Time, y=std_weight, ymin=0, ymax=0, color = Group, group=ID, linetype="1")) +
+          scale_fill_manual(guide="none", values =(c("0"="#cccccc"))) +  
+          theme(legend.position="none")
+
+gain_plot <- std_rat_trend %>% ggplot(aes(x=Time, y = mean_gain, ymin=mean_gain-se_gain, ymax=mean_gain+se_gain)) +
+          geom_line(aes(color="mean +- se", linetype="2")) +
+          geom_errorbar(aes( color = "mean +- se"), width=1.5, size = 0.3) +
+          geom_ribbon(aes(fill="0",alpha=0.1)) +
           labs(color= "Group") +
-          ylab("standardized weight") +
-          geom_line(data=rats_std, aes(x=Time, y=std_weight, color = Group, group=ID))
+          ylab("std. weight gain") +
+          geom_line(data=rats_std, aes(x=Time, y=std_weight_gain, ymin=0, ymax=0, color = Group, group=ID, linetype="1")) +
+          scale_linetype(guide="none") +
+          scale_fill_manual(guide="none", values =(c("0"="#cccccc"))) +
+          scale_alpha(guide="none") +
+          theme(legend.position = c(0.92,0.105))
 
+gridExtra::grid.arrange(weight_plot,gain_plot, ncol=2)
 ```
+The standardized  bodyweight plot is difficult to interpret because of the difference in baselines, but we can identify a potential outlier in the green group.
 
+The standardized weight gain plot does show some patterns, we see some spread among the groups, which we can dive deeper into.
 
-### 1.3 mean plots
+### 1.3 Group mean and std. error plots
 
-There are so few samples per group that the figure 1.5 contains more information than plotting the mean and standard error, but let's plot that as well for completeness.
+Now let's do that same plot but instead of individuals, let's plot the mean and standard error per group
 
-```{r fig.align="center", fig.cap = "fig. 1.6, Mean growth per group", fig.width = 16, fig.height = 16, results = 'hide'}
+```{r fig.align="center", fig.cap = "fig. 3.2, Bodyweight and weight gain over time per group ", fig.width = 17, fig.height = 9, results = 'hide'}
 
 std_rat_group_trends <-  rats_std %>% group_by(Time, Group) %>%
-  summarise(mean = mean(std_weight), se = sd(std_weight)/sqrt(n())) %>%
+  summarise(mean = mean(std_weight), mean_gain = mean(std_weight_gain), se = sd(std_weight)/sqrt(n()),se_gain = sd(std_weight_gain)/sqrt(n())) %>%
   ungroup()
 
-std_rat_group_trends %>% ggplot(aes(x = Time, y = mean, color = Group)) +
+sum_weight_plot <- std_rat_group_trends %>% ggplot(aes(x = Time, y = mean,ymin=mean-se, ymax=mean+se, color = Group)) +
+  ggtitle("Bodyweight per group") +
   geom_line() +
   geom_point(size=3) +
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.3) +
-  scale_y_continuous(name = "mean(Bodyweight) +/- se(Bodyweight)")
+  geom_linerange() +
+  geom_ribbon(aes(fill=Group,alpha = 0.1)) +
+  scale_y_continuous(name = "mean(std. weight) +/- se(std. weight)") +
+  theme(legend.position="none")
+
+sum_gain_plot <- std_rat_group_trends %>% ggplot(aes(x = Time,ymin=mean_gain-se_gain, ymax=mean_gain+se_gain, y = mean_gain, color = Group)) +
+  ggtitle("Weight gain per group") +
+  geom_line() +
+  geom_point(size=3) +
+  geom_linerange() +
+  geom_ribbon(aes(fill=Group,alpha = 0.1)) +
+  scale_y_continuous(name = "mean(std. weight gain) +/- se(std. weight gain)") +
+  scale_alpha(guide="none") +
+  theme(legend.position = c(0.95,0.08))
+
+gridExtra::grid.arrange(sum_weight_plot,sum_gain_plot, ncol=2)
+
 ```
 
-### 1.4 Outlier in group 2?
+Looking at the weight gain plot specifically, we do see the three groups clearly separating, but we still don't know how much of this effect would be because of the baseline weight of the rats or the treatment, since both of these variables differed between the groups.
 
-### 1.5 Standardize by baseline?
+### 1.4 Outliers
 
-### 1.6 fit and anova?
+```{r fig.align="center", fig.cap = "fig. 4.1, boxplots of the three groups", fig.width = 17, fig.height = 9, results = 'hide'}
+weight_boxplot <- final_rats %>% ggplot(aes(y=Bodyweight)) +
+              geom_boxplot() +
+              facet_wrap(~Group)
 
-## 2. BPRS and chapter 9 analysis
+gain_boxplot <- final_rats %>% ggplot(aes(y=Weight_gain)) +
+              geom_boxplot() +
+              facet_wrap(~Group)
 
->Implement the analyses of Chapter 9 of MABS, using the R codes of Exercise Set 6: Meet and Repeat: PART II, but using the BPRS data (from Chapter 8 and Meet and Repeat: PART I).
-(0-8 points: 0-4 points for graphs or analysis results + 0-4 points for their interpretations)
+gridExtra::grid.arrange(weight_boxplot, gain_boxplot, ncol=2)
+```
 
+
+There is a rat in group 2 that seems to be increasing the variance in the group, which would make t-tests more difficult to run.
+Let's remove it
+
+```{r fig.align="center", fig.cap = "fig. 4.2, boxplots of the three groups, outliers removed", fig.width = 17, fig.height = 9, results = 'hide'}
+outlier_ids <- (final_rats %>% filter(Bodyweight > 600))$ID
+rats <- rats %>% filter(!(ID %in% outlier_ids))
+initial_rats <- rats %>% filter(Time == initial_time)
+final_rats <- rats %>% filter(Time == final_time)
+
+weight_boxplot2 <- final_rats %>% ggplot(aes(y=Bodyweight)) +
+              geom_boxplot() +
+              facet_wrap(~Group)
+
+gain_boxplot2 <- final_rats %>% ggplot(aes(y=Weight_gain)) +
+              geom_boxplot() +
+              facet_wrap(~Group)
+
+gridExtra::grid.arrange(weight_boxplot2, gain_boxplot2, ncol=2)
+```
+
+There is still seemingly one outlier, but the difference in variances between the groups now seems better.
+
+One issue is that the variance of group 1 is much smaller than groups 2 and 3 --- likely because there are twice as many rats in that group.
+
+### 1.5 Summary measure: final weight gain
+
+Visually we have identified a between-groups effect, but there are two possible causes of the effect: the baseline weight and the treatment (diet).
+
+Based on table 8.2 from MABS4IODS, I will use as summary measure the final value of the weight gain, because there is a growth trend in the data.
+Another option for summary measures would have been the regression coefficients of the bodyweight of each individual rat.
+
+#### 1.5.1 Unpaired t-test {.tabset}
+
+As the baselines are different for each group, using unpaired t-tests we can only compare the weight gain between two groups.
+The tabs contain the t-tests for each comparison of two groups.
+
+```{r}
+final_rats_12 <- final_rats %>% filter(Group != 3)
+final_rats_13 <- final_rats %>% filter(Group != 2)
+final_rats_23 <- final_rats %>% filter(Group != 1)
+```
+
+Let's also check if the variances of the groups are similar:
+
+```{r}
+final_rats %>% group_by(Group) %>%
+  summarise(var = var(Weight_gain))
+```
+they are not. I will therefore use Welch's t-test (var.equal = FALSE) when doing the t-tests.
+
+##### Group 1 and 2
+```{r}
+t.test(Weight_gain ~ Group, data = final_rats_12, var.equal = F)
+```
+
+##### Group 1 and 3
+```{r}
+t.test(Weight_gain ~ Group, data = final_rats_13, var.equal = F)
+```
+
+##### Group 2 and 3
+```{r}
+t.test(Weight_gain ~ Group, data = final_rats_23, var.equal = F)
+```
+
+#### {-}
+
+There seems to be some difference between groups 1 and 2 and groups 1 and 3, but the t-test is not significant at level 0.05 (the confidence intervals straddle 0).
+Based on this, we could conclude that there _may_ be something causing the mice in group 1 to gain less weight than the other groups (but we still can't say if it's their diet).
+
+#### 1.5.2 ANOVA {.tabset}
+
+Interestingly, the test statistic seems to be the same for `Group` regardless of if we use the body weight or the weight gain as the response variable, so let's use Weight gain.
+
+For each of the four combinations {1,2,3}, {1,2}, {1,3}, {2,3}, we fit a linear model and then we perform an analysis of variance (ANOVA) on the fit.
+
+Dependent variable:
+
+ - weight gain
+
+Independent variables:
+
+ - the baseline weight of the rat
+ - the diet (group)
+
+##### All three groups
+
+```{r}
+final_fit_gain <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats)
+anova(final_fit_gain)
+```
+
+##### Group 1 and 2
+
+```{r}
+final_fit_gain_12 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_12)
+anova(final_fit_gain_12)
+```
+
+##### Group 1 and 3
+
+```{r}
+final_fit_gain_13 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_13)
+anova(final_fit_gain_13)
+```
+
+##### Group 2 and 3
+
+```{r}
+final_fit_gain_23 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_23)
+anova(final_fit_gain_23)
+```
+
+#### {-}
+
+Now we can say that it seems like there is a significant effect due to diet, at p=0.001423, and that the effect is between group 1 and the other groups. (1 vs 2: p = 0.004489, 1 vs 3:p = 0.01149).
+
+#### 1.6 Interpretation
+
+Based on the summary measure analysis, we can conclude that there is a statistically significant change in the mean weight gain of a rat when given the same diet that the first group of rats were given.
+
+## 2. Analyzing the BPRS dataset using linear mixed effect models
+
+For this problem we're creating a linear mixed effects model for the BPRS dataset.
+
+BPRS is the _brief psychiatric rating scale_, used as indicator of schizophrenia.
+The dataset consists of BPRS evaluations from 40 subjects, with one observations per subject taken once a week for 9 weeks.
+Half the subjects were given one treatment, the other half another treatment.
+
+```{r}
+bprs <- read_csv("data/bprs.csv") %>% mutate(subject = factor(subject)) %>% mutate(treatment = factor(treatment))
+```
