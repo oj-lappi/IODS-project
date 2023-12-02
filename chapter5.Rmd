@@ -130,7 +130,7 @@ This tells us that PC1 captures nearly **all** of the variance (>0.9999) in the 
 Knowing this, we can't expect a very good biplot, but let's plot one anyway.
 
 ```{r fig.align="center", fig.cap = "fig. 2.1, biplot for PCA of the raw data ", fig.width = 14, fig.height = 14, results = 'hide'}
-pca_pr <- round(1*summary(pca_raw)$importance[2, ], digits = 4)
+pca_pr <- round(100*summary(pca_raw)$importance[2, ], digits = 4)
 labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
 biplot(pca_raw, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("Negative GNI,", labels[1]), ylab = paste("Maternal mortality,",labels[2]))
 ```
@@ -170,7 +170,7 @@ All principal components do seem to capture at least one percent of the variance
 
 ```{r fig.align="center", fig.cap = "fig. 3.1, biplot for PCA of the scaled data ", fig.width = 16, fig.height = 16, results = 'hide'}
 
-pca_pr <- round(1*summary(pca_scaled)$importance[2, ], digits = 4)
+pca_pr <- round(100*summary(pca_scaled)$importance[2, ], digits = 4)
 labels <- paste0(names(pca_pr), " (", pca_pr, "%)")
 
 biplot(pca_scaled, cex = c(0.8, 1), col = c("grey40", "#dd4028"), xlab = paste("neg. Human development,", labels[1]), ylab = paste("Gender equality,",labels[2]))
