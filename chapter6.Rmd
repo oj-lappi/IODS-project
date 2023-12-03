@@ -5,6 +5,7 @@ library(readr)
 library(dplyr)
 library(GGally)
 library(gridExtra)
+library(lme4)
 ```
 
 
@@ -20,7 +21,7 @@ The rats were weighed weekly over a 9-week period to study the effects of the di
 rats <- read_csv("data/rats.csv") %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
 ```
 
-### 1.1A Graphical displays, weight {.tabset .tabset-fade }
+### 1.1A Dataset visualization, weight {.tabset .tabset-fade }
 
 Let's inspect:
 
@@ -30,7 +31,7 @@ Let's inspect:
  - the mean growth profile
  - the growth profile of the three groups
  
-Below, there are three tabs in the notebook, you can switch between them to look at different aspects of the data.
+Below, there are four tabs in the notebook, you can switch between them to look at different aspects of the data.
 
 #### Distribution shift
  
@@ -110,12 +111,16 @@ We see an issue with taking the mean bodyweight of all rats: none of the rats ar
 We also see more clearly in this plot that one of the groups (group 1) has double the number of rats that the others do (8 vs. 4).
 The outlier in the green group is also much more apparent here, we might have to remove it.
 
-### 1.1B Graphical displays, weight gain {.tabset .tabset-fade }
+### {-}
 
-The lines are difficult to compare because the groups' baselines are so different.
+It's clear that there are issues with using the bodyweight itself.
+If we were to use a linear mixed effects model, we might be able to deal with this.
+But for a summary measure approach, we might want to capture the growth in some other way, which leads us to the next section.
+
+### 1.1B Dataset visualization, weight gain {.tabset .tabset-fade }
+
+The reason the lines are difficult to compare is because the groups' baselines (intercepts) are so different.
 If we could get all of the lines to start at the same location, we may be able to compare them better, so let's create a new column for each observation subtracting the baseline bodyweight from the measured bodyweight, which we can call `Weight_gain`.
-
-And then we can look at graphical displays of that data.
 
 ```{r}
 rats <- rats %>%
@@ -125,6 +130,8 @@ rats <- rats %>%
 checksum <- rats$Baseline_weight - rats$Bodyweight + rats$Weight_gain
 all(checksum == 0)
 ```
+
+Again, there are multiple tabs to browse through.
 
 #### Weight gain after 9W
  
@@ -393,6 +400,108 @@ BPRS is the _brief psychiatric rating scale_, used as indicator of schizophrenia
 The dataset consists of BPRS evaluations from 40 subjects, with one observations per subject taken once a week for 9 weeks.
 Half the subjects were given one treatment, the other half another treatment.
 
+As preprocessing, I will factorize the treatment and subject columns.
+Additionally, because the subject id's are reused in both treatments, I will calculate a unique subject id from the 40 subject,treatment pairs instead.
+
 ```{r}
-bprs <- read_csv("data/bprs.csv") %>% mutate(subject = factor(subject)) %>% mutate(treatment = factor(treatment))
+bprs <- read_csv("data/bprs.csv") %>%
+        mutate(subject = factor(subject+(treatment-1)*20)) %>%
+        mutate(treatment = factor(treatment))
+```
+
+
+### 2.1 Dataset visualization {.tabset .tabset-fade}
+
+Let's visualize the data, first a summary of all measurements, then a mean of each group
+
+```{r}
+bprs_trend <- bprs %>%
+               group_by(week) %>%
+               summarise(mean_bprs = mean(bprs), se_bprs = sd(bprs)/sqrt(n()), var =var(bprs))
+bprs_trend
+```
+
+#### Individuals and overall mean and spread
+
+```{r fig.align="center", fig.cap = "fig. 5.1, subject bprs over time, colored by treatment", fig.width = 16, fig.height = 16, results = 'hide'}
+
+
+ggplot(data=bprs_trend, aes(x=week, y=mean_bprs,ymin=mean_bprs-se_bprs, ymax=mean_bprs+se_bprs, linetype="mean +- se")) +
+    geom_ribbon(aes(alpha=0.1, fill="se"), show.legend = F)+geom_errorbar(width=0.1, size = 0.3) + geom_line() +
+    geom_line(aes(y=mean_bprs+sqrt(var), linetype="1 stdev")) + geom_line(aes(y=mean_bprs-sqrt(var), linetype="1 stdev")) +
+    geom_line(data=bprs, aes(y=bprs, ymin=0, ymax=0,color=treatment, group=subject)) +
+    labs(color= "Treatment", linetype="") +
+    ylab("BPRS") +
+    scale_fill_manual("", values =(c("se"="#cccccc"))) +
+    scale_linetype_manual(values =(c("1 stdev"="dashed", "mean +- se"="solid"))) +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+```
+
+#### Per group means
+
+```{r fig.align="center", fig.cap = "fig. 5.2, mean bprs per treatment group over time", fig.width = 16, fig.height = 16, results = 'hide'}
+
+bprs_treatment_trend <- bprs %>%
+              group_by(week, treatment) %>%
+              summarise(mean_bprs = mean(bprs), se_bprs = sd(bprs)/sqrt(n()), var =var(bprs))
+
+ggplot(data=bprs_treatment_trend, aes(x=week, y=mean_bprs,ymin=mean_bprs-se_bprs, ymax=mean_bprs+se_bprs, linetype="mean +- se", color = treatment, group = treatment)) +
+    geom_ribbon(aes(alpha=0.1, fill=treatment), show.legend = F)+geom_errorbar(width=0.1, size = 0.3) + geom_line() +
+    geom_line(aes(y=mean_bprs+sqrt(var), linetype="1 stdev")) + geom_line(aes(y=mean_bprs-sqrt(var), linetype="1 stdev")) +
+    labs(color= "Treatment", linetype="") +
+    ylab("BPRS") +
+    scale_linetype_manual(values =(c("1 stdev"="dashed", "mean +- se"="solid"))) +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+```
+
+### {-}
+
+We can clearly see that most of the variance in the dataset is due to a measurements above the mean than due to measurements below the mean (by looking at how far beyond one standard deviation the measurements go on both sides of the mean) --- there is some skew in the distribution.
+Especially this one outlier is messing with the distribution, and from the per treatment plot, we can deduce that the outlier is in treatment group 2.
+
+Overall, it looks like there isn't much difference between the two groups, the only possibly interesting feature in the plots is a possible effect at about weeks 6-7, where the slope of both groups seem to change.
+
+### 2.2 Independent linear model
+
+
+Let's first fit a model that ignores the correlation of repeated measures taken on the same subject.
+
+```{r}
+bprs.lm <- lm(bprs ~ week + treatment, bprs)
+summary(bprs.lm)
+bprs
+```
+
+Based on the independent model, we find no statistically significant effect due to the treatment.
+This doesn't necessarily mean anything, since the difference in intercepts and slopes between subjects is very high (as seen in figure 5.1) when compared to the difference in intercepts and slopes between groups.
+
+The linear model does, however also identify the overall slope over time, which is -2.27.
+
+### 2.3 Random intercept model
+
+```{r}
+bprs.lmri <- lmer(bprs ~ week + treatment + (1|subject), data = bprs, REML = FALSE)
+summary(bprs.lmri)
+plot(bprs.lmri)
+```
+
+### 2.3 Random intercept + slope model
+
+```{r}
+bprs.lmris <- lmer(bprs ~ week + treatment + (week|subject), data = bprs, REML = FALSE)
+summary(bprs.lmris)
+```
+
+### 2.4 ANOVA
+
+```{r}
+anova(bprs.lmris,bprs.lmri)
+```
+
+### 2.5 Random intercept + slope with interaction
+
+```{r}
+
 ```
