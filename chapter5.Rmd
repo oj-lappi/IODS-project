@@ -383,6 +383,6 @@ If we interpret the dimensions from before we could roughly say that:
 
 There is also a slight difference in the distribution of answers between sexes:
  - men more likely to prefer black tea
- - women more likely to prefer Ear Grey or green tea
+ - women more likely to prefer Earl Grey or green tea
  
 The frequency of tea drinking is all over the place and forms no clear trendline in the biplot.
