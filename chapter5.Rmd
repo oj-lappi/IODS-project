@@ -227,13 +227,13 @@ This component **might** measure the relative focus on wealth as compared to oth
 
  - `Give your personal interpretations of the first two principal component dimensions based on the biplot drawn after PCA on the standardized human data.` (0-2 points)
 
-## The principal components
+### The principal components
 
 I already touched on this in the previous section, but as the first principal components align with `Mat.Mor`, `Ado.Birth`, `Life.Exp`, `GNI`, `Edu.Exp`, and `Edu2.FM`, it seems to capture the general wellbeing of society. Or rather, the lack thereof, since it's pointing in the other direction.
 
 The second axis measures gender equality, as it aligns well with `Parli.F` and `Labo.FM`.
 
-## Social equality trend line
+### Social equality trend line
 
 It is good to point out at this point that there is a clear trend line in the upper left corner of the biplot, moving from the right bottom to the top left.
 It seems like most of the countries are in this trend line.
@@ -241,9 +241,7 @@ There is then a large spread of the rest of the countries, which is why this tre
 Let's call this trend line the social equality trend line, as all the countries at the top of this trend line have social welfare programs, such as universal healthcare, strong unions, and low GINI indices.
 (A bit hand-wavy, but this is a course assignment, not a research paper).
 
-
-
-## Correlations
+### Correlations
 
 There are some additional interesting correlations in the original variables with the PCs.
 `Mat.Mor` and `Edu.Exp` both point slightly in the positive PC2 direction.
@@ -343,7 +341,7 @@ summary(mca)
 
 Let's start with a plot of the individuals (`ind`):
 
-```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+```{r fig.align="center",fig.cap="fig. 5.1 MCA \"ind\" variables, individuals", fig.width = 16, fig.height = 16, results = 'hide'}
 par(mfrow=c(2,2))
 plot(mca, graph.type="ggplot", invisible=c("var","quali.sup","quanti.sup"),cex=0.8)
 ```
@@ -354,9 +352,10 @@ The scatter plot forms a triangle in this space, with a wide base forming around
 
 Now let's plot the `var` variables --- `Tea`, `price`, and `How` --- which the plot function for FactoMineR's MCA colors black, red, and green, respectively. 
 
-```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+```{r fig.align="center", fig.cap="fig. 5.2 MCA \"var\" variables, tea dirnking habits", fig.width = 16, fig.height = 16, results = 'hide'}
 plot(mca, graph.type="ggplot", invisible=c("ind","quali.sup","quanti.sup"), cex=0.8, habillage="quali")
 ```
+
 Dimension 1 seems to cover:
  - most strongly (Tea: 0.61), whether the respondent prefers black tea or not (black +1.36, green -0.49, Earl Grey -0.44)
  - then (How: 0.334), whether the respondenr likes to add things to their tea (alone -0.28, lemon, milk, other all positive +)
@@ -370,7 +369,7 @@ The `p_unknown` category in the price has the highest coefficient here, which ma
 
 Finally, let's look at the demographics of the individuals and see how they distribute over this space:
 
-```{r fig.align="center", fig.width = 16, fig.height = 16, results = 'hide'}
+```{r fig.align="center", fig.cap="fig. 5.3 MCA \"quali\" variables, demographics", fig.width = 16, fig.height = 16, results = 'hide'}
 plot(mca, graph.type="ggplot", invisible=c("ind","var","quanti.sup"), cex=0.8, habillage="quali")
 ```
 

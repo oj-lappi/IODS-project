@@ -21,7 +21,7 @@ The rats were weighed weekly over a 9-week period to study the effects of the di
 rats <- read_csv("data/rats.csv") %>% mutate(ID = factor(ID)) %>% mutate(Group = factor(Group))
 ```
 
-### 1.1A Dataset visualization, weight {.tabset .tabset-fade }
+## 1.1A Dataset visualization, weight {.tabset .tabset-fade }
 
 Let's inspect:
 
@@ -33,7 +33,7 @@ Let's inspect:
  
 Below, there are four tabs in the notebook, you can switch between them to look at different aspects of the data.
 
-#### Distribution shift
+### Distribution shift
  
 We start by looking at the distribution of initial and final bodyweights to see if we can detect a trend. 
 
@@ -57,7 +57,7 @@ ggplot() + geom_density(data= initial_rats, bw = "SJ", aes(x=Bodyweight, fill = 
 There is a clear shift towards a heavier distribution of bodyweights over the course of the experiment --- the rats are growing.
 It looks like there's three modes in both distribution, but in the final bodyweight distribution, the middle mode has gotten close to the heaviest mode.
 
-#### Groups
+### Groups
 
 Let's look at the initial bodyweights of the three groups.
 
@@ -71,7 +71,7 @@ initial_rats %>%
 Hmm, the groups seem to have different bodyweight distributions, the modes do not overlap, and I have a feeling that the difference between groups is much greater than the difference between the growth from initial to final measurements.
 This is even clearer in the next tab to the right.
 
-#### Distribution shift per group
+### Distribution shift per group
 
 ```{r fig.align="center", fig.cap = "fig. 1.3, Baseline and final weight distributions per group", fig.width = 16, fig.height = 16, results = 'hide'}
 
@@ -92,7 +92,7 @@ The shift of the distributions are visible, but they are still smaller than the 
 In my mind this would make the groups a little difficult to compare, since we can't be sure that the effect of the baseline bodyweight doesn't behave differently for each group.
 The green high peak is a single outlier, as we will see when looking at the line plots.
 
-#### Growth trend
+### Growth trend
 
 ```{r fig.align="center", fig.cap = "fig. 1.4, Mean growth and plot of each rats bodyweight increase", fig.width = 16, fig.height = 16, results = 'hide'}
 rat_trend <-  rats %>% group_by(Time) %>%
@@ -111,13 +111,13 @@ We see an issue with taking the mean bodyweight of all rats: none of the rats ar
 We also see more clearly in this plot that one of the groups (group 1) has double the number of rats that the others do (8 vs. 4).
 The outlier in the green group is also much more apparent here, we might have to remove it.
 
-### {-}
+## {-}
 
 It's clear that there are issues with using the bodyweight itself.
 If we were to use a linear mixed effects model, we might be able to deal with this.
 But for a summary measure approach, we might want to capture the growth in some other way, which leads us to the next section.
 
-### 1.1B Dataset visualization, weight gain {.tabset .tabset-fade }
+## 1.1B Dataset visualization, weight gain {.tabset .tabset-fade }
 
 The reason the lines are difficult to compare is because the groups' baselines (intercepts) are so different.
 If we could get all of the lines to start at the same location, we may be able to compare them better, so let's create a new column for each observation subtracting the baseline bodyweight from the measured bodyweight, which we can call `Weight_gain`.
@@ -133,7 +133,7 @@ all(checksum == 0)
 
 Again, there are multiple tabs to browse through.
 
-#### Weight gain after 9W
+### Weight gain after 9W
  
 The initial distribution of weight gain is constant (all zeros) so we will only plot the overall weight gain distribution after 9 weeks.
 
@@ -145,7 +145,7 @@ ggplot() + geom_density(data=final_rats, bw = "SJ", aes(x=Weight_gain,  fill = "
 ```
 There seem to be two modes here, which may indicate a difference between groups.
 
-#### Weight gain per group
+### Weight gain per group
 
 Let's look at the final bodyweights of the three groups.
 
@@ -159,7 +159,7 @@ final_rats %>%
 
 Okay, there seem to be some difference between the red (1) and green (3) groups, but these were also the groups with the largest differences in the baseline.
 
-#### Weight gain trend
+### Weight gain trend
 
 ```{r fig.align="center", fig.cap = "fig. 2.3, Mean growth and plot of each rats bodyweight increase", fig.width = 16, fig.height = 16, results = 'hide'}
 rat_trend <-  rats %>% group_by(Time) %>%
@@ -179,7 +179,7 @@ rat_trend %>% ggplot(aes(x=Time, y = mean_gain,ymin=mean_gain-se_gain, ymax=mean
 
 Looking at the weight gain of each rat, we do start to see some 
 
-### 1.2 Standardize {.tabset .tabset-fade}
+## 1.2 Standardize {.tabset .tabset-fade}
 
 Let's standardize the dataset and plot that last plot (`Growth Trend`) again, for both the body weight and the weight gain
 
@@ -221,7 +221,7 @@ The standardized  bodyweight plot is difficult to interpret because of the diffe
 
 The standardized weight gain plot does show some patterns, we see some spread among the groups, which we can dive deeper into.
 
-### 1.3 Group mean and std. error plots
+## 1.3 Group mean and std. error plots
 
 Now let's do that same plot but instead of individuals, let's plot the mean and standard error per group
 
@@ -256,7 +256,7 @@ gridExtra::grid.arrange(sum_weight_plot,sum_gain_plot, ncol=2)
 
 Looking at the weight gain plot specifically, we do see the three groups clearly separating, but we still don't know how much of this effect would be because of the baseline weight of the rats or the treatment, since both of these variables differed between the groups.
 
-### 1.4 Outliers
+## 1.4 Outliers
 
 ```{r fig.align="center", fig.cap = "fig. 4.1, boxplots of the three groups", fig.width = 17, fig.height = 9, results = 'hide'}
 weight_boxplot <- final_rats %>% ggplot(aes(y=Bodyweight)) +
@@ -295,14 +295,14 @@ There is still seemingly one outlier, but the difference in variances between th
 
 One issue is that the variance of group 1 is much smaller than groups 2 and 3 --- likely because there are twice as many rats in that group.
 
-### 1.5 Summary measure: final weight gain
+## 1.5 Summary measure: final weight gain
 
 Visually we have identified a between-groups effect, but there are two possible causes of the effect: the baseline weight and the treatment (diet).
 
 Based on table 8.2 from MABS4IODS, I will use as summary measure the final value of the weight gain, because there is a growth trend in the data.
 Another option for summary measures would have been the regression coefficients of the bodyweight of each individual rat.
 
-#### 1.5.1 Unpaired t-test {.tabset}
+### 1.5.1 Unpaired t-test {.tabset}
 
 As the baselines are different for each group, using unpaired t-tests we can only compare the weight gain between two groups.
 The tabs contain the t-tests for each comparison of two groups.
@@ -321,27 +321,27 @@ final_rats %>% group_by(Group) %>%
 ```
 they are not. I will therefore use Welch's t-test (var.equal = FALSE) when doing the t-tests.
 
-##### Group 1 and 2
+#### Group 1 and 2
 ```{r}
 t.test(Weight_gain ~ Group, data = final_rats_12, var.equal = F)
 ```
 
-##### Group 1 and 3
+#### Group 1 and 3
 ```{r}
 t.test(Weight_gain ~ Group, data = final_rats_13, var.equal = F)
 ```
 
-##### Group 2 and 3
+#### Group 2 and 3
 ```{r}
 t.test(Weight_gain ~ Group, data = final_rats_23, var.equal = F)
 ```
 
-#### {-}
+### {-}
 
 There seems to be some difference between groups 1 and 2 and groups 1 and 3, but the t-test is not significant at level 0.05 (the confidence intervals straddle 0).
 Based on this, we could conclude that there _may_ be something causing the mice in group 1 to gain less weight than the other groups (but we still can't say if it's their diet).
 
-#### 1.5.2 ANOVA {.tabset}
+### 1.5.2 ANOVA {.tabset}
 
 Interestingly, the test statistic seems to be the same for `Group` regardless of if we use the body weight or the weight gain as the response variable, so let's use Weight gain.
 
@@ -356,39 +356,39 @@ Independent variables:
  - the baseline weight of the rat
  - the diet (group)
 
-##### All three groups
+#### All three groups
 
 ```{r}
 final_fit_gain <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats)
 anova(final_fit_gain)
 ```
 
-##### Group 1 and 2
+#### Group 1 and 2
 
 ```{r}
 final_fit_gain_12 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_12)
 anova(final_fit_gain_12)
 ```
 
-##### Group 1 and 3
+#### Group 1 and 3
 
 ```{r}
 final_fit_gain_13 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_13)
 anova(final_fit_gain_13)
 ```
 
-##### Group 2 and 3
+#### Group 2 and 3
 
 ```{r}
 final_fit_gain_23 <- lm(Weight_gain ~ Baseline_weight + Group, data = final_rats_23)
 anova(final_fit_gain_23)
 ```
 
-#### {-}
+### {-}
 
 Now we can say that it seems like there is a significant effect due to diet, at p=0.001423, and that the effect is between group 1 and the other groups. (1 vs 2: p = 0.004489, 1 vs 3:p = 0.01149).
 
-#### 1.6 Interpretation
+### 1.6 Interpretation
 
 Based on the summary measure analysis, we can conclude that there is a statistically significant change in the mean weight gain of a rat when given the same diet that the first group of rats were given.
 
@@ -410,7 +410,7 @@ bprs <- read_csv("data/bprs.csv") %>%
 ```
 
 
-### 2.1 Dataset visualization {.tabset .tabset-fade}
+## 2.1 Dataset visualization {.tabset .tabset-fade}
 
 Let's visualize the data, first a summary of all measurements, then a mean of each group
 
@@ -421,7 +421,7 @@ bprs_trend <- bprs %>%
 bprs_trend
 ```
 
-#### Individuals and overall mean and spread
+### Individuals and overall mean and spread
 
 ```{r fig.align="center", fig.cap = "fig. 5.1, subject bprs over time, colored by treatment", fig.width = 16, fig.height = 16, results = 'hide'}
 
@@ -438,7 +438,7 @@ ggplot(data=bprs_trend, aes(x=week, y=mean_bprs,ymin=mean_bprs-se_bprs, ymax=mea
     scale_alpha(guide="none")
 ```
 
-#### Per group means
+### Per group means
 
 ```{r fig.align="center", fig.cap = "fig. 5.2, mean bprs per treatment group over time", fig.width = 16, fig.height = 16, results = 'hide'}
 
@@ -456,14 +456,14 @@ ggplot(data=bprs_treatment_trend, aes(x=week, y=mean_bprs,ymin=mean_bprs-se_bprs
     scale_alpha(guide="none")
 ```
 
-### {-}
+## {-}
 
 We can clearly see that most of the variance in the dataset is due to a measurements above the mean than due to measurements below the mean (by looking at how far beyond one standard deviation the measurements go on both sides of the mean) --- there is some skew in the distribution.
 Especially this one outlier is messing with the distribution, and from the per treatment plot, we can deduce that the outlier is in treatment group 2.
 
 Overall, it looks like there isn't much difference between the two groups, the only possibly interesting feature in the plots is a possible effect at about weeks 6-7, where the slope of both groups seem to change.
 
-### 2.2 Independent linear model
+## 2.2 Independent linear model
 
 Let's first fit a model that ignores the correlation of repeated measures taken on the same subject.
 
@@ -477,7 +477,7 @@ This doesn't necessarily mean anything, since the difference in intercepts and s
 
 The linear model does, however also identify the overall slope over time, which is -2.27.
 
-### 2.3 Random intercept model
+## 2.3 Random intercept model
 
 ```{r}
 bprs.lmri <- lmer(bprs ~ week + treatment + (1|subject), data = bprs, REML = FALSE)
@@ -520,7 +520,7 @@ ri_fit_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
 gridExtra::grid.arrange(ri_observed_plot, ri_fit_plot, ncol=2)
 ```
 
-#### Confidence intervals
+### Confidence intervals
 
 Let's check the confidence intervals to see if there is a clear effect in either direction:
 
@@ -530,7 +530,7 @@ confint(bprs.lmri)
 
 The confidence interval for the coefficient of treatment2 straddles 0, so there is not a signfificant effect.
 
-### 2.3 Random intercept + slope model
+## 2.3 Random intercept + slope model
 
 ```{r}
 bprs.lmris <- lmer(bprs ~ week + treatment + (week|subject), data = bprs, REML = FALSE)
@@ -578,7 +578,7 @@ ris_fit_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) 
 gridExtra::grid.arrange(ris_observed_plot, ris_fit_plot, ncol=2)
 ```
 
-### 2.4 ANOVA between random intercept and random intercept + slope
+## 2.4 ANOVA between random intercept and random intercept + slope
 
 ```{r}
 anova(bprs.lmris,bprs.lmri)
@@ -587,7 +587,7 @@ anova(bprs.lmris,bprs.lmri)
 The deviance and AIC have both dropped, which tells us that adding the slope gives us a much better fit --- AIC, the Akaike information criterion, is a measure of how much information is lost in the model, so less is better.
 At p=1.5e-14, we can confidently say that each subject definitely has a characteristic slope.
 
-#### Confidence intervals
+### Confidence intervals
 
 Nevertheless, let's also check the confidence intervals to double check:
 
@@ -597,7 +597,7 @@ confint(bprs.lmris)
 
 The confidence interval for the coefficient of `treatment2` straddles zero, which means that we cannot conclude that there is a difference in outcome due to the treatment using this model.
 
-### 2.5 Random intercept + slope with interaction
+## 2.5 Random intercept + slope with interaction
 
 ```{r}
 bprs.lmris_int <- lmer(bprs ~ week + treatment + week * treatment + (week|subject) , data = bprs, REML = FALSE)
@@ -632,14 +632,14 @@ int_fit_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) 
 gridExtra::grid.arrange(int_observed_plot, int_fit_plot, ncol=2)
 ```
 
-### 2.6 ANOVA between rand. intercept + slope model with interaction and without
+## 2.6 ANOVA between rand. intercept + slope model with interaction and without
 ```{r}
 anova(bprs.lmris_int,bprs.lmris)
 ```
 
 We see that there is a negligible drop in deviance and even an increase in AIC, and p=0.18 --- there is not a significant effect due to a week-treatment interaction.
 
-#### Confidence intervals
+### Confidence intervals
 
 Nevertheless, let's check the confidence intervals to see if there is a clear effect from either the treatment or a treatment-time interaction:
 
@@ -649,6 +649,6 @@ confint(bprs.lmris_int)
 
 The fixed-effect coefficients for both `treatment2` and `week:treatment2` straddle 0, which means we have to conclude that there is no significant evidence of an effect in the data, even using a mixed effects model with interaction.
 
-### 2.7 Interpretation
+## 2.7 Interpretation
 
 We have to conclude that, using a linear mixed effects model, we cannot find a significant effect due to the treatment.
