@@ -472,10 +472,6 @@ bprs.lm <- lm(bprs ~ week + treatment, bprs)
 summary(bprs.lm)
 ```
 
-```{r fig.align="center", fig.cap = "Linear model", fig.width = 16, fig.height = 16, results = 'hide'}
-plot(bprs.lm, which=1)
-```
-
 Based on the independent model, we find no statistically significant effect due to the treatment.
 This doesn't necessarily mean anything, since the difference in intercepts and slopes between subjects is very high (as seen in figure 5.1) when compared to the difference in intercepts and slopes between groups.
 
@@ -483,25 +479,10 @@ The linear model does, however also identify the overall slope over time, which 
 
 ### 2.3 Random intercept model
 
-In a random intercept model, the per-subject random effect is modeled as a normal distribution centered on zero and variance $\hat{\sigma}^2_u$, but is this valid if the intercept distribution is skewed?
-Seemingly so, after a quick search.
-
-**Should we standardize the bprs scores?**
-
 ```{r}
 bprs.lmri <- lmer(bprs ~ week + treatment + (1|subject), data = bprs, REML = FALSE)
 summary(bprs.lmri)
 ```
-
-```{r fig.align="center", fig.cap = "Linear model", fig.width = 16, fig.height = 16, results = 'hide'}
-plot(bprs.lmri)
-```
-
-```{r}
-bprs.lmri$
-```
-
-#### Variance due to random effects
 
 The variance due to the random intercept is:
 
@@ -511,7 +492,43 @@ And the residual variance is:
 
 $\hat{\sigma}^2 = 54.23$
 
-Since $\hat{\sigma}^2_u \gt \hat{\sigma}^2$, I take this to mean that the random intercept was able to reduce the variance
+Since $\hat{\sigma}^2_u \gt \hat{\sigma}^2$, I take this to mean that the random intercept was able to reduce the variance.
+
+```{r fig.align="center", fig.cap = "fig. 6.1, Model with random intercept", fig.width = 16, fig.height = 9, results = 'hide'}
+bprs$fitted_ri <- fitted(bprs.lmri)
+
+ri_observed_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
+    ggtitle("Observed values") +
+    geom_line(aes(y=bprs)) +
+    labs(color= "Treatment") +
+    ylab("BPRS") +
+    scale_fill_manual("", values =(c("se"="#cccccc"))) +
+    scale_linetype_manual(guide="none") +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+
+ri_fit_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
+    ggtitle("Fitted values") +
+    geom_line(aes(y=fitted_ri)) +
+    labs(color= "Treatment") +
+    ylab("BPRS") +
+    scale_fill_manual("", values =(c("se"="#cccccc"))) +
+    scale_linetype_manual(guide="none") +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+
+gridExtra::grid.arrange(ri_observed_plot, ri_fit_plot, ncol=2)
+```
+
+#### Confidence intervals
+
+Let's check the confidence intervals to see if there is a clear effect in either direction:
+
+```{r}
+confint(bprs.lmri)
+```
+
+The confidence interval for the coefficient of treatment2 straddles 0, so there is not a signfificant effect.
 
 ### 2.3 Random intercept + slope model
 
@@ -519,8 +536,6 @@ Since $\hat{\sigma}^2_u \gt \hat{\sigma}^2$, I take this to mean that the random
 bprs.lmris <- lmer(bprs ~ week + treatment + (week|subject), data = bprs, REML = FALSE)
 summary(bprs.lmris)
 ```
-
-
 
 So now we have the following random effects:
 
@@ -532,16 +547,36 @@ And the residual variance is:
 
 $\hat{\sigma}^2 = 36.747$
 
+As the residual variance is less now, we already have a hint that the model is a better fit than the previous one.
+
 Interestingly, the total variance is now much higher.
 Having discussed this with the course teachers, the intuitive reason for this is that the slopes being adjusted per-subject will tend to spread the intecepts more, as the lines can freely "rotate" into position now.
 
-**Let's check the confidence intervals:**
+```{r fig.align="center", fig.cap = "fig. 6.2, Model with random intercept and slope", fig.width = 16, fig.height = 9, results = 'hide'}
+bprs$fitted_ris <- fitted(bprs.lmris)
 
-```{r}
-confint(bprs.lmris)
+ris_observed_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
+    ggtitle("Observed values") +
+    geom_line(aes(y=bprs)) +
+    labs(color= "Treatment") +
+    ylab("BPRS") +
+    scale_fill_manual("", values =(c("se"="#cccccc"))) +
+    scale_linetype_manual(guide="none") +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+
+ris_fit_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
+    ggtitle("Fitted values") +
+    geom_line(aes(y=fitted_ris)) +
+    labs(color= "Treatment") +
+    ylab("BPRS") +
+    scale_fill_manual("", values =(c("se"="#cccccc"))) +
+    scale_linetype_manual(guide="none") +
+    scale_color_manual(values =(c("1"="#ff9999","2"="#9999ff"))) +
+    scale_alpha(guide="none")
+
+gridExtra::grid.arrange(ris_observed_plot, ris_fit_plot, ncol=2)
 ```
-
-The confidence interval for the coefficient of `treatment2` straddles zero, which means that we cannot conclude that there is a difference in outcome due to the treatment using this model.
 
 ### 2.4 ANOVA between random intercept and random intercept + slope
 
@@ -549,16 +584,18 @@ The confidence interval for the coefficient of `treatment2` straddles zero, whic
 anova(bprs.lmris,bprs.lmri)
 ```
 
-The deviance and AIC have both dropped, which tells us that adding the slope gives us a much better fit.
+The deviance and AIC have both dropped, which tells us that adding the slope gives us a much better fit --- AIC, the Akaike information criterion, is a measure of how much information is lost in the model, so less is better.
 At p=1.5e-14, we can confidently say that each subject definitely has a characteristic slope.
 
 #### Confidence intervals
 
-Nevertheless, let's check the confidence intervals to see if there is a clear effect from either the treatment or a treatment-time interaction:
+Nevertheless, let's also check the confidence intervals to double check:
 
 ```{r}
 confint(bprs.lmris)
 ```
+
+The confidence interval for the coefficient of `treatment2` straddles zero, which means that we cannot conclude that there is a difference in outcome due to the treatment using this model.
 
 ### 2.5 Random intercept + slope with interaction
 
@@ -567,7 +604,9 @@ bprs.lmris_int <- lmer(bprs ~ week + treatment + week * treatment + (week|subjec
 summary(bprs.lmris_int)
 ```
 
-```{r fig.align="center", fig.cap = "Linear model", fig.width = 16, fig.height = 9, results = 'hide'}
+The variances have barely changed, and the plot below also looks almost exactly the same as the previous model.
+
+```{r fig.align="center", fig.cap = "fig. 6.3, Model with random intercept and slope, including interaction between week and treatment", fig.width = 16, fig.height = 9, results = 'hide'}
 bprs$fitted_ris_int <- fitted(bprs.lmris_int)
 
 int_observed_plot <- ggplot(data=bprs, aes(x=week, color=treatment, group=subject )) +
@@ -609,3 +648,7 @@ confint(bprs.lmris_int)
 ```
 
 The fixed-effect coefficients for both `treatment2` and `week:treatment2` straddle 0, which means we have to conclude that there is no significant evidence of an effect in the data, even using a mixed effects model with interaction.
+
+### 2.7 Interpretation
+
+We have to conclude that, using a linear mixed effects model, we cannot find a significant effect due to the treatment.
